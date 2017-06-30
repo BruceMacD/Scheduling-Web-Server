@@ -1,0 +1,1 @@
+/usr/bin/cc  -g   CMakeFiles/Scheduling_Web_Server.dir/network.c.o CMakeFiles/Scheduling_Web_Server.dir/sws.c.o  -o Scheduling_Web_Server 
