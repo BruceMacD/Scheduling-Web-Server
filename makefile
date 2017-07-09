@@ -1,7 +1,7 @@
 # Targets & general dependencies
 PROGRAM = sws
-HEADERS = network.h
-OBJS = network.o sws.o
+HEADERS = network.h request-table.h
+OBJS = network.o sws.o request-table.o
 ADD_OBJS = 
 
 # compilers, linkers, utilities, and flags
