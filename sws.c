@@ -142,6 +142,14 @@ void processRequestRR(RCB* rcb, Scheduler* sched) {
     
 }
 
+// process request for Multilevel Queue with Feedback
+void processRequestMLQ(RCB* rcb, Scheduler* sched) {
+  //TODO
+    //init three queues
+    //8kb high priority
+    //64kb med priority
+    //round robin low priority
+}
 
 /* This function is where the program starts running.
  *    The function first parses its command line parameters to determine port #
@@ -157,11 +165,14 @@ int main( int argc, char **argv ) {
   int port = -1;                                    /* server port # */
   int fd;                                           /* client file descriptor */
   char sched_type[5];
+  //round robin
   char type_rr[5] = "RR";
+  //multilevel queue with feedback
+  char type_mlq[5] = "MLQ";
   /* check for and process parameters 
    */
   // TODO - read scheduler to choose scheduler type
-  if( ( argc < 2 ) || ( sscanf( argv[1], "%d", &port ) < 1 ) ) {
+  if( ( argc < 3 ) || ( sscanf( argv[1], "%d", &port ) < 1 ) ) {
     printf( "usage: sms <port> <scheduler>\n" );
     return 0;
   }
@@ -186,6 +197,9 @@ int main( int argc, char **argv ) {
         // create scheduler here, RR for now
         if (strncmp(sched_type, type_rr, 5) == 0) {
           processRequestRR(next, &sched);
+        }
+        if (strncmp(sched_type, type_mlq, 5) == 0) {
+          processRequestMLQ(next, &sched);
         }
             
       }

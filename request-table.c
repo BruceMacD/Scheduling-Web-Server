@@ -8,7 +8,7 @@ void initRequestTable(Scheduler* sched) {
   sched->requestTable = (struct RCBnode*)malloc(sizeof(struct RCBnode));
 }
 
-// function for adding RCB to queueu
+// function for adding RCB to queue
 void addRCBtoQueue(RCB* rcb, Scheduler* sched){
   struct RCBnode* next;
   struct RCBnode* node;
