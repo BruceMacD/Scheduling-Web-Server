@@ -113,12 +113,12 @@ void processRequestRR(RCB* rcb, Scheduler* sched) {
     }
   }
   long len;                                                    /* length of data read */
-    
+
   len = fread( buffer, 1, MAX_HTTP_SIZE, rcb->handle);    /* read file chunk */
   if( len < 0 ) {                                       /* check for errors */
     perror( "Error while writing to client" );
   } else if( len > 0 ) {                                  /* if none, send chunk */
-        
+
     len = write(rcb->clientFD, buffer, len);
     // subtract from bytes remaining
     rcb->numBytesRemaining -= len;
@@ -126,9 +126,9 @@ void processRequestRR(RCB* rcb, Scheduler* sched) {
       perror( "Error while writing to client" );
     }
   }                       /* the last chunk < 8192 */
-    
+
   //printf("%s\n", buffer);
-    
+
   // if this was the end, close the file and connection,
   //otherwise add it to the end of the queue
   if (rcb->numBytesRemaining <= 0){
@@ -139,7 +139,6 @@ void processRequestRR(RCB* rcb, Scheduler* sched) {
   } else {
     addRCBtoQueue(rcb, sched);
   }
-    
 }
 
 // process request for Multilevel Queue with Feedback
@@ -164,11 +163,13 @@ void processRequestMLQ(RCB* rcb, Scheduler* sched) {
 int main( int argc, char **argv ) {
   int port = -1;                                    /* server port # */
   int fd;                                           /* client file descriptor */
-  char sched_type[5];
+  char sched_type[6];
   //round robin
   char type_rr[5] = "RR";
+  //shortest job first
+  char type_sjf[6] = "SJF";
   //multilevel queue with feedback
-  char type_mlq[5] = "MLQ";
+  char type_mlq[6] = "MLQ";
   /* check for and process parameters 
    */
   // TODO - read scheduler to choose scheduler type
@@ -176,7 +177,8 @@ int main( int argc, char **argv ) {
     printf( "usage: sms <port> <scheduler>\n" );
     return 0;
   }
-  strncpy(sched_type, argv[2], 5);
+    //copy the schedule type to the arguments (into char array of size 10)
+  strncpy(sched_type, argv[2], 6);
   network_init( port );                             /* init network module */
     
   // The scheduler
@@ -198,8 +200,11 @@ int main( int argc, char **argv ) {
         if (strncmp(sched_type, type_rr, 5) == 0) {
           processRequestRR(next, &sched);
         }
-        if (strncmp(sched_type, type_mlq, 5) == 0) {
-          processRequestMLQ(next, &sched);
+        else if (strncmp(sched_type, type_sjf, 6) == 0) {
+            //TODO: SJF
+        }
+        else if (strncmp(sched_type, type_mlq, 6) == 0) {
+          processRequestRR(next, &sched);
         }
             
       }
