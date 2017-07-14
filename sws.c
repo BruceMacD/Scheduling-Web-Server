@@ -170,6 +170,9 @@ int main( int argc, char **argv ) {
         char type_sjf[6] = "SJF";
         //multilevel queue with feedback
         char type_mlq[6] = "MLQ";
+        int type_SJF = 0;
+        int type_RR = 0;
+        int type_MLFB = 0;
         /* check for and process parameters
          */
         // TODO - read scheduler to choose scheduler type
@@ -177,12 +180,31 @@ int main( int argc, char **argv ) {
                 printf( "usage: sms <port> <scheduler>\n" );
                 return 0;
         }
+
+        //find the scheduler type
+        if (strcmp(argv[2], "RR") == 0 || strcmp(argv[2], "rr") == 0) {
+            type_RR = 1;
+        }
+        else if (strcmp(argv[2], "SJF") == 0 || strcmp(argv[2], "sjf") == 0) {
+            type_SJF = 1;
+        }
+        else if (strcmp(argv[2], "MLFB") == 0 || strcmp(argv[2], "mlfb") == 0) {
+            type_MLFB = 1;
+        }
+        else {
+            printf( "invalid scheduler\n" );
+            return 0;
+        }
+
         network_init( port );                       /* init network module */
 
         // The schedulers
         Scheduler schedRR;
+        schedRR.requestTable = NULL;
         Scheduler schedHIGH;
+        schedHIGH.requestTable = NULL;
         Scheduler schedLOW;
+        schedLOW.requestTable = NULL;
 
         //TODO: I think this creates different queues for each client, which I don't believe we want to do - Bruce
         for(;; ) {                                  /* main loop */
@@ -190,14 +212,13 @@ int main( int argc, char **argv ) {
 
                 for( fd = network_open(); fd >= 0; fd = network_open() ) { /* get clients */                           /* process each client */
                         // create scheduler here, RR for now
-                        if (strcmp(argv[2], "RR") == 0 || strcmp(argv[2], "rr") == 0) {
+                        if (type_RR) {
                                 serve_client( fd, &schedRR, MAX_HTTP_SIZE_8KB );
                         }
-                        else if (strcmp(argv[2], "SJF") == 0 || strcmp(argv[2], "sjf") == 0) {
+                        else if (type_SJF) {
                                 //TODO: SJF
                         }
-                        else if (strcmp(argv[2], "MLFB") == 0 || strcmp(argv[2], "mlfb") == 0) {
-                                printf( "in mlfb\n" );
+                        else if (type_MLFB) {
                                 //start mlfb in high schedule priority queue
                                 //serve_client( fd, &schedHIGH, MAX_HTTP_SIZE_8KB );
                         }
@@ -209,8 +230,7 @@ int main( int argc, char **argv ) {
                 // the next request
                 //TODO: This needs to be able to run at the same time as serving clients or it isn't an effective queue
                 //TODO: Should be moved to a separate function for the multithreading portion
-                /*
-                while (schedHIGH.requestTable != NULL) {
+                while (type_MLFB && schedHIGH.requestTable != NULL) {
                         RCB* next = getNextRCB(&schedHIGH);
                         if (next != NULL) {
                                 //for debug
@@ -220,7 +240,7 @@ int main( int argc, char **argv ) {
                         }
                 }
 
-                while (schedLOW.requestTable != NULL) {
+                while (type_MLFB && schedLOW.requestTable != NULL) {
                         RCB* next = getNextRCB(&schedLOW);
                         if (next != NULL) {
                                 //for debug only
@@ -228,8 +248,8 @@ int main( int argc, char **argv ) {
                                 //TODO
                         }
                 }
-                */
-                while (schedRR.requestTable != NULL) {
+
+                while ((type_MLFB || type_RR) && schedRR.requestTable != NULL) {
                         RCB* next = getNextRCB(&schedRR);
                         if (next != NULL) {
                                 //process all requests in round robin
