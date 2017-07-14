@@ -143,13 +143,49 @@ void processRequestRR(RCB* rcb, Scheduler* sched) {
 }
 
 // process request for Multilevel Queue with Feedback
-void processRequestMLFB(RCB* rcb, Scheduler* sched) {
+void processRequestHighPriority(RCB* rcb, Scheduler* schedHIGH, Scheduler* schedMED) {
         //TODO
         //init three queues
         //8kb high priority
         //64kb med priority
         //round robin low priority
         // send part of it to the client
+        // send part of it to the client
+        static char *buffer;                            /* request buffer */
+        if( !buffer ) {                       /* 1st time, alloc buffer */
+                buffer = malloc( MAX_HTTP_SIZE_8KB );
+                if( !buffer ) {         /* error check */
+                        perror( "Error while allocating memory" );
+                        abort();
+                }
+        }
+        long len;                                        /* length of data read */
+
+        len = fread( buffer, 1, MAX_HTTP_SIZE_8KB, rcb->handle); /* read file chunk */
+        if( len < 0 ) {                           /* check for errors */
+                perror( "Error while writing to client" );
+        } else if( len > 0 ) {                      /* if none, send chunk */
+
+                len = write(rcb->clientFD, buffer, len);
+                // subtract from bytes remaining
+                rcb->numBytesRemaining -= len;
+                if( len < 1 ) {               /* check for errors */
+                        perror( "Error while writing to client" );
+                }
+        }           /* the last chunk < 8192 */
+
+        //printf("%s\n", buffer);
+
+        // if this was the end, close the file and connection,
+        //otherwise add it to the end of the queue
+        if (rcb->numBytesRemaining <= 0) {
+                //need to free things
+                free(rcb);
+                fclose(rcb->handle);
+                close(rcb->clientFD);
+        } else {
+                addRCBtoQueue(rcb, schedMED);
+        }
 }
 
 /* This function is where the program starts running.
@@ -181,30 +217,35 @@ int main( int argc, char **argv ) {
                 return 0;
         }
 
-        //find the scheduler type
-        if (strcmp(argv[2], "RR") == 0 || strcmp(argv[2], "rr") == 0) {
-            type_RR = 1;
-        }
-        else if (strcmp(argv[2], "SJF") == 0 || strcmp(argv[2], "sjf") == 0) {
-            type_SJF = 1;
-        }
-        else if (strcmp(argv[2], "MLFB") == 0 || strcmp(argv[2], "mlfb") == 0) {
-            type_MLFB = 1;
-        }
-        else {
-            printf( "invalid scheduler\n" );
-            return 0;
-        }
-
         network_init( port );                       /* init network module */
 
         // The schedulers
+        //round robin
         Scheduler schedRR;
         schedRR.requestTable = NULL;
+        //high priority
         Scheduler schedHIGH;
         schedHIGH.requestTable = NULL;
-        Scheduler schedLOW;
-        schedLOW.requestTable = NULL;
+        //medium priority
+        Scheduler schedMED;
+        schedMED.requestTable = NULL;
+
+
+
+        //find the scheduler type
+        if (strcmp(argv[2], "RR") == 0 || strcmp(argv[2], "rr") == 0) {
+                type_RR = 1;
+        }
+        else if (strcmp(argv[2], "SJF") == 0 || strcmp(argv[2], "sjf") == 0) {
+                type_SJF = 1;
+        }
+        else if (strcmp(argv[2], "MLFB") == 0 || strcmp(argv[2], "mlfb") == 0) {
+                type_MLFB = 1;
+        }
+        else {
+                printf( "invalid scheduler\n" );
+                return 0;
+        }
 
         //TODO: I think this creates different queues for each client, which I don't believe we want to do - Bruce
         for(;; ) {                                  /* main loop */
@@ -220,7 +261,7 @@ int main( int argc, char **argv ) {
                         }
                         else if (type_MLFB) {
                                 //start mlfb in high schedule priority queue
-                                //serve_client( fd, &schedHIGH, MAX_HTTP_SIZE_8KB );
+                                serve_client( fd, &schedHIGH, MAX_HTTP_SIZE_8KB );
                         }
                         else {
                                 printf( "invalid scheduler\n" );
@@ -236,12 +277,13 @@ int main( int argc, char **argv ) {
                                 //for debug
                                 printf( "Processing high priority queue\n" );
                                 //only the mlfb uses this scheduler
-                                //processRequestMLFB(next, &schedHIGH, &schedLOW, &schedRR);
+                                processRequestHighPriority(next, &schedHIGH, &schedMED);
                         }
                 }
 
-                while (type_MLFB && schedLOW.requestTable != NULL) {
-                        RCB* next = getNextRCB(&schedLOW);
+                //check the medium priority queue, it should break if there is a new file in high priority
+                while (type_MLFB && schedMED.requestTable != NULL && type_MLFB && schedHIGH.requestTable == NULL) {
+                        RCB* next = getNextRCB(&schedMED);
                         if (next != NULL) {
                                 //for debug only
                                 printf( "Processing low priority queue.\n" );
@@ -249,6 +291,7 @@ int main( int argc, char **argv ) {
                         }
                 }
 
+                //TODO: Check the other queues in each while loop
                 while ((type_MLFB || type_RR) && schedRR.requestTable != NULL) {
                         RCB* next = getNextRCB(&schedRR);
                         if (next != NULL) {
