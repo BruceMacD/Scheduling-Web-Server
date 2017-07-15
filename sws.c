@@ -31,7 +31,7 @@ int g_sequenceCounter = 1;
  *             fd : the file descriptor to the client connection
  * Returns: None
  */
-static void serve_client( int fd, Scheduler* sched, int http_size ) {
+static void serve_client( int fd, Scheduler* sched, size_t http_size ) {
         static char *buffer;                        /* request buffer */
         char *req = NULL;                           /* ptr to req file */
         char *brk;                                  /* state used by strtok */
@@ -79,14 +79,13 @@ static void serve_client( int fd, Scheduler* sched, int http_size ) {
                         struct stat buf;
                         fstat(fileno(fin), &buf);
 
-
                         //create request control block
                         RCB* rcb = (RCB*)malloc(sizeof(RCB));
                         rcb->sequenceNum = g_sequenceCounter++;
                         rcb->clientFD = fd;
                         rcb->handle = fin;
                         rcb->numBytesRemaining = (int)buf.st_size; // buf gives us the size remaining
-                        rcb->quantum = 8192; // this is based on which scheduler, this is correct for RR
+                        rcb->quantum = http_size; // this is based on which scheduler
 
                         //call the scheduler function to put this in the queue
                         addRCBtoQueue(rcb, sched);
@@ -106,13 +105,13 @@ static void serve_client( int fd, Scheduler* sched, int http_size ) {
 void processRequestRR(RCB* rcb, Scheduler* sched) {
         // send part of it to the client
         static char *buffer;                                  /* request buffer */
-        if( !buffer ) {                             /* 1st time, alloc buffer */
+        //if( !buffer ) {                             /* 1st time, alloc buffer */
                 buffer = malloc( MAX_HTTP_SIZE_8KB );
                 if( !buffer ) {                     /* error check */
                         perror( "Error while allocating memory" );
                         abort();
                 }
-        }
+        //}
         long len;                                              /* length of data read */
 
         len = fread( buffer, 1, MAX_HTTP_SIZE_8KB, rcb->handle); /* read file chunk */
@@ -143,25 +142,17 @@ void processRequestRR(RCB* rcb, Scheduler* sched) {
 }
 
 // process request for Multilevel Queue with Feedback
-void processRequestHighPriority(RCB* rcb, Scheduler* schedHIGH, Scheduler* schedMED) {
-        //TODO
-        //init three queues
-        //8kb high priority
-        //64kb med priority
-        //round robin low priority
-        // send part of it to the client
-        // send part of it to the client
+void processRequestMLFB(RCB* rcb, Scheduler* nextLevelSchedule, size_t max_size, size_t next_size) {
         static char *buffer;                            /* request buffer */
-        if( !buffer ) {                       /* 1st time, alloc buffer */
-                buffer = malloc( MAX_HTTP_SIZE_8KB );
-                if( !buffer ) {         /* error check */
-                        perror( "Error while allocating memory" );
-                        abort();
-                }
+        //reallocate buffer
+        buffer = malloc( max_size );
+        if( !buffer ) {         /* error check */
+            perror( "Error while allocating memory" );
+            abort();
         }
         long len;                                        /* length of data read */
 
-        len = fread( buffer, 1, MAX_HTTP_SIZE_8KB, rcb->handle); /* read file chunk */
+        len = fread( buffer, 1, max_size, rcb->handle); /* read file chunk */
         if( len < 0 ) {                           /* check for errors */
                 perror( "Error while writing to client" );
         } else if( len > 0 ) {                      /* if none, send chunk */
@@ -184,7 +175,13 @@ void processRequestHighPriority(RCB* rcb, Scheduler* schedHIGH, Scheduler* sched
                 fclose(rcb->handle);
                 close(rcb->clientFD);
         } else {
-                addRCBtoQueue(rcb, schedMED);
+            if (nextLevelSchedule == NULL) {
+                //scheduler needs to be initialized for next queue
+                serve_client( rcb->clientFD, nextLevelSchedule, next_size);
+            } else {
+                //add to the next level priority queue
+                addRCBtoQueue(rcb, nextLevelSchedule);
+            }
         }
 }
 
@@ -201,7 +198,7 @@ void processRequestHighPriority(RCB* rcb, Scheduler* schedHIGH, Scheduler* sched
 int main( int argc, char **argv ) {
         int port = -1;                              /* server port # */
         int fd;                                     /* client file descriptor */
-        //TODO: for some reason removing these char arrays causes a seg fault, any ideas? - Bruce
+        //TODO: for some reason removing these unused char arrays causes a seg fault, any ideas? - Bruce
         //shortest job first
         char type_sjf[6] = "SJF";
         //multilevel queue with feedback
@@ -211,7 +208,6 @@ int main( int argc, char **argv ) {
         int type_MLFB = 0;
         /* check for and process parameters
          */
-        // TODO - read scheduler to choose scheduler type
         if( ( argc < 3 ) || ( sscanf( argv[1], "%d", &port ) < 1 ) ) {
                 printf( "usage: sms <port> <scheduler>\n" );
                 return 0;
@@ -229,7 +225,7 @@ int main( int argc, char **argv ) {
         //medium priority
         Scheduler schedMED;
         schedMED.requestTable = NULL;
-
+        //TODO: Suggestion for SJF, make it a separate scheduler here
 
 
         //find the scheduler type
@@ -247,7 +243,6 @@ int main( int argc, char **argv ) {
                 return 0;
         }
 
-        //TODO: I think this creates different queues for each client, which I don't believe we want to do - Bruce
         for(;; ) {                                  /* main loop */
                 network_wait();                   /* wait for clients */
 
@@ -269,7 +264,7 @@ int main( int argc, char **argv ) {
                         }
                 }
                 // the next request
-                //TODO: This needs to be able to run at the same time as serving clients or it isn't an effective queue
+                //TODO: Can this run for multiple clients with the same queue?
                 //TODO: Should be moved to a separate function for the multithreading portion
                 while (type_MLFB && schedHIGH.requestTable != NULL) {
                         RCB* next = getNextRCB(&schedHIGH);
@@ -277,24 +272,27 @@ int main( int argc, char **argv ) {
                                 //for debug
                                 printf( "Processing high priority queue\n" );
                                 //only the mlfb uses this scheduler
-                                processRequestHighPriority(next, &schedHIGH, &schedMED);
+                                //processRequestMLFB(next RCB, next scheduler to put file in, this que size, next que size)
+                                processRequestMLFB(next, &schedMED, MAX_HTTP_SIZE_8KB, MAX_HTTP_SIZE_64KB);
                         }
                 }
 
                 //check the medium priority queue, it should break if there is a new file in high priority
-                while (type_MLFB && schedMED.requestTable != NULL && type_MLFB && schedHIGH.requestTable == NULL) {
+                while (type_MLFB && schedMED.requestTable != NULL && schedHIGH.requestTable == NULL) {
                         RCB* next = getNextRCB(&schedMED);
                         if (next != NULL) {
                                 //for debug only
-                                printf( "Processing low priority queue.\n" );
-                                //TODO
+                                printf( "Processing medium priority queue.\n" );
+                                processRequestMLFB(next, &schedRR, MAX_HTTP_SIZE_64KB, MAX_HTTP_SIZE_8KB);
                         }
                 }
 
-                //TODO: Check the other queues in each while loop
-                while ((type_MLFB || type_RR) && schedRR.requestTable != NULL) {
+                while ((type_MLFB || type_RR) && schedRR.requestTable != NULL && schedMED.requestTable == NULL
+                       && schedHIGH.requestTable == NULL) {
                         RCB* next = getNextRCB(&schedRR);
                         if (next != NULL) {
+                            //for debug only
+                                printf( "Processing round robin queue.\n" );
                                 //process all requests in round robin
                                 processRequestRR(next, &schedRR);
                         }
