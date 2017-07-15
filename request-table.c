@@ -12,12 +12,12 @@ void initRequestTable(Scheduler* sched) {
 void addRCBtoQueue(RCB* rcb, Scheduler* sched){
   struct RCBnode* next;
   struct RCBnode* node;
-  if (sched->requestTable == NULL) {               // the queue is empty, so make a new node
+  if (sched->requestTable == NULL) {               // The queue is empty, so make a new node
     initRequestTable(sched);
-    node = sched->requestTable;      // we want to get the request table
+    node = sched->requestTable;      // We want to get the request table
     node->rcb = rcb;
   } else {
-    node = sched->requestTable;      // we want to get the request table
+    node = sched->requestTable;      // We want to get the request table
     // If queue is empty, add to from
     while (node->next != NULL) {
       node = node->next;
