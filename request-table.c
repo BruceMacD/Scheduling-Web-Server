@@ -32,19 +32,21 @@ void addRCBtoQueue(RCB* rcb, Scheduler* sched){
 }
 
 void addRCBtoQueueForSJF(RCB* rcb, Scheduler* sched){
-    //TODO: Implement inserting RCB into Queue based on file size
     struct RCBnode* next;
     struct RCBnode* node;
     int value;
-    if (sched->requestTable == NULL) {               // the queue is empty, so make a new node
+    //Add node to empty list
+    if (sched->requestTable == NULL) {               
 	printf("First node \n");
         initRequestTable(sched);
-        node = sched->requestTable;      // we want to get the request table
+        node = sched->requestTable;     
         node->rcb = rcb;
     } 
+    //Add node to list based on increasing order of numBytesRemaining to be processed
     else {
-        node = sched->requestTable;      // we want to get the request table
+        node = sched->requestTable;      
 	value = rcb->numBytesRemaining;
+	//Add node to front of list
 	if(node->rcb->numBytesRemaining > value){
 	    printf("Adding node to front \n");
 	    next = (struct RCBnode*)malloc(sizeof(struct RCBnode));
@@ -53,6 +55,7 @@ void addRCBtoQueueForSJF(RCB* rcb, Scheduler* sched){
 	    sched->requestTable->rcb = rcb;
 	    sched->requestTable->next = next;
 	}
+	//Add node between two nodes
 	else{
 	     printf("Adding Node\n");
 	     while (node->next->rcb->numBytesRemaining < value) {
@@ -61,7 +64,6 @@ void addRCBtoQueueForSJF(RCB* rcb, Scheduler* sched){
              next = (struct RCBnode*)malloc(sizeof(struct RCBnode));
              next->rcb = rcb;
 	     next->next = node->next;
-             //sched->requestTable->next = next;
 	     node->next = next;    
 	}   
     }   

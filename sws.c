@@ -93,19 +93,14 @@ static void serve_client( int fd, Scheduler* sched, size_t http_size ) {
 			//For SJF quantum is the entire file, call function to add RCB to correct position in queue
  			if(sched->type ==1){
 			    rcb->quantum = (int)buf.st_size;
-			    //TODO: Change once method to addRCBtoQueueforSJF() is implemented
-     			    //addRCBtoQueue(rcb, sched);
 			    addRCBtoQueueForSJF(rcb, sched);
 			}
 			//For RR and MLFB, quantum is the size parameter, call function to add RCB to end of queue
 			else{
 			    rcb->quantum = http_size;
-
                             //call the scheduler function to put this in the queue
                             addRCBtoQueue(rcb, sched);
-			}
-
-                        
+			} 
                         len = sprintf( buffer, "HTTP/1.1 200 OK\n\n" ); /* send success code */
                         write( fd, buffer, len );
 
@@ -257,12 +252,7 @@ void processRequestMLFB(RCB* rcb, Scheduler* nextLevelSchedule, size_t max_size,
 int main( int argc, char **argv ) {
         int port = -1;                              /* server port # */
         int fd;                                     /* client file descriptor */
-        //TODO: for some reason removing these unused char arrays causes a seg fault, any ideas? - Bruce
-	/* I commented them out and am not receiving a seg fault, will remove if you can confim - Brandon */
-        //shortest job first
-        //char type_sjf[6] = "SJF";
-        //multilevel queue with feedback
-        //char type_mlq[6] = "MLQ";
+	//Scheduler Flags
         int type_SJF = 0;
         int type_RR = 0;
         int type_MLFB = 0;
