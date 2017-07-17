@@ -24,7 +24,7 @@ void addRCBtoQueue(RCB* rcb, Scheduler* sched){
     }
     next = (struct RCBnode*)malloc(sizeof(struct RCBnode));
     next->rcb = rcb;
-    sched->requestTable->next = next;
+    node->next = next;
   }
     
 }
