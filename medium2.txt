@@ -1,4 +1,4 @@
-This file is slightly larger than medium2.txt file.
+This file is slightly larger than medium.txt file.
 
 It has more lines,
 

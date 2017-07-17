@@ -166,6 +166,10 @@ void processRequestRR(RCB* rcb, Scheduler* sched) {
         long len;                                              /* length of data read */
 
         len = fread( buffer, 1, MAX_HTTP_SIZE_8KB, rcb->handle); /* read file chunk */
+
+	//DEBUGGING, REMOVE
+	printf("QUANTUM: %d LENGTH: %ld \n", rcb->quantum, len);
+
         if( len < 0 ) {                                 /* check for errors */
                 perror( "Error while writing to client" );
         } else if( len > 0 ) {                            /* if none, send chunk */
@@ -204,6 +208,10 @@ void processRequestMLFB(RCB* rcb, Scheduler* nextLevelSchedule, size_t max_size,
         long len;                                        /* length of data read */
 
         len = fread( buffer, 1, max_size, rcb->handle); /* read file chunk */
+
+	//DEBUGGING, REMOVE
+	printf("QUANTUM: %d LENGTH: %ld \n", rcb->quantum, len);
+
         if( len < 0 ) {                           /* check for errors */
                 perror( "Error while writing to client" );
         } else if( len > 0 ) {                      /* if none, send chunk */

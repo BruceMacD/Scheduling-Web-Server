@@ -13,10 +13,12 @@ void addRCBtoQueue(RCB* rcb, Scheduler* sched){
   struct RCBnode* next;
   struct RCBnode* node;
   if (sched->requestTable == NULL) {               // the queue is empty, so make a new node
+    printf("First node \n");
     initRequestTable(sched);
     node = sched->requestTable;      // we want to get the request table
     node->rcb = rcb;
   } else {
+    printf("Adding node to end \n");
     node = sched->requestTable;      // we want to get the request table
     // if queue is empty, add to from
     while (node->next != NULL) {
@@ -24,7 +26,7 @@ void addRCBtoQueue(RCB* rcb, Scheduler* sched){
     }
     next = (struct RCBnode*)malloc(sizeof(struct RCBnode));
     next->rcb = rcb;
-    sched->requestTable->next = next;
+    node->next = next;
   }
     
 }
@@ -35,6 +37,7 @@ void addRCBtoQueueForSJF(RCB* rcb, Scheduler* sched){
     struct RCBnode* node;
     int value;
     if (sched->requestTable == NULL) {               // the queue is empty, so make a new node
+	printf("First node \n");
         initRequestTable(sched);
         node = sched->requestTable;      // we want to get the request table
         node->rcb = rcb;
@@ -43,6 +46,7 @@ void addRCBtoQueueForSJF(RCB* rcb, Scheduler* sched){
         node = sched->requestTable;      // we want to get the request table
 	value = rcb->numBytesRemaining;
 	if(node->rcb->numBytesRemaining > value){
+	    printf("Adding node to front \n");
 	    next = (struct RCBnode*)malloc(sizeof(struct RCBnode));
 	    next->rcb = node->rcb;
 	    next->next = node->next;
@@ -50,13 +54,15 @@ void addRCBtoQueueForSJF(RCB* rcb, Scheduler* sched){
 	    sched->requestTable->next = next;
 	}
 	else{
+	     printf("Adding Node\n");
 	     while (node->next->rcb->numBytesRemaining < value) {
                  node = node->next;
              }
              next = (struct RCBnode*)malloc(sizeof(struct RCBnode));
              next->rcb = rcb;
 	     next->next = node->next;
-             sched->requestTable->next = next;    
+             //sched->requestTable->next = next;
+	     node->next = next;    
 	}   
     }   
 }
