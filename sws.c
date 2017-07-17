@@ -20,6 +20,11 @@
 #define MAX_HTTP_SIZE_8KB 8192
 #define MAX_HTTP_SIZE_64KB 65536                 /* size of buffer to allocate */
 
+/* Definitions used to identify the scheduler during processing */
+#define SJF 1
+#define RR 2
+#define MLFB 3
+
 // global sequence counter
 int g_sequenceCounter = 1;
 
@@ -85,11 +90,22 @@ static void serve_client( int fd, Scheduler* sched, size_t http_size ) {
                         rcb->clientFD = fd;
                         rcb->handle = fin;
                         rcb->numBytesRemaining = (int)buf.st_size; // buf gives us the size remaining
-                        rcb->quantum = http_size; // this is based on which scheduler
+			//For SJF quantum is the entire file, call function to add RCB to correct position in queue
+ 			if(sched->type ==1){
+			    rcb->quantum = (int)buf.st_size;
+			    //TODO: Change once method to addRCBtoQueueforSJF() is implemented
+     			    addRCBtoQueue(rcb, sched);
+			    //addRCBtoQueueForSJF(rcb, sched)
+			}
+			//For RR and MLFB, quantum is the size parameter, call function to add RCB to end of queue
+			else{
+			    rcb->quantum = http_size;
 
-                        //call the scheduler function to put this in the queue
-                        addRCBtoQueue(rcb, sched);
+                            //call the scheduler function to put this in the queue
+                            addRCBtoQueue(rcb, sched);
+			}
 
+                        
                         len = sprintf( buffer, "HTTP/1.1 200 OK\n\n" ); /* send success code */
                         write( fd, buffer, len );
 
@@ -97,9 +113,44 @@ static void serve_client( int fd, Scheduler* sched, size_t http_size ) {
         }
         //free(buffer);
 
-//  close( fd );                                     /* close client connectuin*/
+  //close( fd );                                     /* close client connectuin*/
 }
+// process request for Shortest Job First
+void processRequestSJF(RCB* rcb, Scheduler* sched) {
+        // send entire file to the client
+        static char *buffer;                                  /* request buffer */
+        buffer = malloc( rcb->quantum );
+        if( !buffer ) {                     /* error check */
+            perror( "Error while allocating memory" );
+            abort();
+        }
+        long len;                                              /* length of data read */
 
+        len = fread( buffer, 1, rcb->quantum, rcb->handle); /* read file chunk */
+
+	//DEBUGGING, REMOVE
+	printf("QUANTUM: %d LENGTH: %ld \n", rcb->quantum, len);
+
+        if( len < 0 ) {                                 /* check for errors */
+                perror( "Error while writing to client" );
+        } else if( len > 0 ) {                            /* if none, send chunk */
+
+                len = write(rcb->clientFD, buffer, len);
+                // subtract from bytes remaining
+                rcb->numBytesRemaining -= len;
+                if( rcb->numBytesRemaining != 0 ) {                           /* check for errors */
+                        perror( "File was not transferred completely as expected" );
+                }
+        }                 /* the last chunk < 8192 */
+
+        //printf("%s\n", buffer);
+
+        // close the file and connection
+        //need to free things
+        free(rcb);
+        fclose(rcb->handle);
+        close(rcb->clientFD);
+}
 
 // process request for Round Robin
 void processRequestRR(RCB* rcb, Scheduler* sched) {
@@ -199,10 +250,11 @@ int main( int argc, char **argv ) {
         int port = -1;                              /* server port # */
         int fd;                                     /* client file descriptor */
         //TODO: for some reason removing these unused char arrays causes a seg fault, any ideas? - Bruce
+	/* I commented them out and am not receiving a seg fault, will remove if you can confim - Brandon */
         //shortest job first
-        char type_sjf[6] = "SJF";
+        //char type_sjf[6] = "SJF";
         //multilevel queue with feedback
-        char type_mlq[6] = "MLQ";
+        //char type_mlq[6] = "MLQ";
         int type_SJF = 0;
         int type_RR = 0;
         int type_MLFB = 0;
@@ -216,17 +268,22 @@ int main( int argc, char **argv ) {
         network_init( port );                       /* init network module */
 
         // The schedulers
+        //SJF scheduler
+        Scheduler schedSJF;
+  	schedSJF.requestTable = NULL;
+	schedSJF.type = SJF;
         //round robin
         Scheduler schedRR;
         schedRR.requestTable = NULL;
+	schedRR.type = RR;
         //high priority
         Scheduler schedHIGH;
         schedHIGH.requestTable = NULL;
+        schedHIGH.type = MLFB;
         //medium priority
         Scheduler schedMED;
         schedMED.requestTable = NULL;
-        //TODO: Suggestion for SJF, make it a separate scheduler here
-
+	schedMED.type = MLFB;
 
         //find the scheduler type
         if (strcmp(argv[2], "RR") == 0 || strcmp(argv[2], "rr") == 0) {
@@ -252,7 +309,7 @@ int main( int argc, char **argv ) {
                                 serve_client( fd, &schedRR, MAX_HTTP_SIZE_8KB );
                         }
                         else if (type_SJF) {
-                                //TODO: SJF
+				serve_client( fd, &schedSJF, MAX_HTTP_SIZE_8KB );
                         }
                         else if (type_MLFB) {
                                 //start mlfb in high schedule priority queue
@@ -266,6 +323,17 @@ int main( int argc, char **argv ) {
                 // the next request
                 //TODO: Can this run for multiple clients with the same queue?
                 //TODO: Should be moved to a separate function for the multithreading portion
+
+		while (type_SJF && schedSJF.requestTable != NULL) {
+                        RCB* next = getNextRCB(&schedSJF);
+                        if (next != NULL) {
+                            //for debuging only
+                                printf( "Processing Shortest Job First Queue.\n" );
+                                //process all requests in SJF
+                                processRequestSJF(next, &schedSJF);
+                        }
+                }
+
                 while (type_MLFB && schedHIGH.requestTable != NULL) {
                         RCB* next = getNextRCB(&schedHIGH);
                         if (next != NULL) {

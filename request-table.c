@@ -29,6 +29,10 @@ void addRCBtoQueue(RCB* rcb, Scheduler* sched){
     
 }
 
+void addRCBtoQueueForSJF(RCB* rcb, Scheduler* sched){
+    //TODO: Implement inserting RCB into Queue based on file size
+}
+
 // gets next request to process
 RCB* getNextRCB(Scheduler* sched){
   if (sched == NULL || sched->requestTable == NULL || sched->requestTable->rcb == NULL) {
