@@ -94,8 +94,8 @@ static void serve_client( int fd, Scheduler* sched, size_t http_size ) {
  			if(sched->type ==1){
 			    rcb->quantum = (int)buf.st_size;
 			    //TODO: Change once method to addRCBtoQueueforSJF() is implemented
-     			    addRCBtoQueue(rcb, sched);
-			    //addRCBtoQueueForSJF(rcb, sched)
+     			    //addRCBtoQueue(rcb, sched);
+			    addRCBtoQueueForSJF(rcb, sched);
 			}
 			//For RR and MLFB, quantum is the size parameter, call function to add RCB to end of queue
 			else{

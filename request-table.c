@@ -31,6 +31,34 @@ void addRCBtoQueue(RCB* rcb, Scheduler* sched){
 
 void addRCBtoQueueForSJF(RCB* rcb, Scheduler* sched){
     //TODO: Implement inserting RCB into Queue based on file size
+    struct RCBnode* next;
+    struct RCBnode* node;
+    int value;
+    if (sched->requestTable == NULL) {               // the queue is empty, so make a new node
+        initRequestTable(sched);
+        node = sched->requestTable;      // we want to get the request table
+        node->rcb = rcb;
+    } 
+    else {
+        node = sched->requestTable;      // we want to get the request table
+	value = rcb->numBytesRemaining;
+	if(node->rcb->numBytesRemaining > value){
+	    next = (struct RCBnode*)malloc(sizeof(struct RCBnode));
+	    next->rcb = node->rcb;
+	    next->next = node->next;
+	    sched->requestTable->rcb = rcb;
+	    sched->requestTable->next = next;
+	}
+	else{
+	     while (node->next->rcb->numBytesRemaining < value) {
+                 node = node->next;
+             }
+             next = (struct RCBnode*)malloc(sizeof(struct RCBnode));
+             next->rcb = rcb;
+	     next->next = node->next;
+             sched->requestTable->next = next;    
+	}   
+    }   
 }
 
 // gets next request to process
