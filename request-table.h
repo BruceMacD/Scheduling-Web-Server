@@ -20,10 +20,14 @@ struct RCBnode {
 // struct for scheduler
 typedef struct {
   struct RCBnode * requestTable;
+  int type;
 } Scheduler;
 
-// function for adding RCB to queueu
+// function for adding RCB to queue
 void addRCBtoQueue(RCB* rcb, Scheduler* sched);
+
+//function for adding RCB to queue for SJF
+void addRCBtoQueueForSJF(RCB* rcb, Scheduler* sched);
 
 // gets next request to process
 RCB* getNextRCB(Scheduler* sched);
