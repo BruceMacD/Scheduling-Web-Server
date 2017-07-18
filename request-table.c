@@ -8,17 +8,17 @@ void initRequestTable(Scheduler* sched) {
   sched->requestTable = (struct RCBnode*)malloc(sizeof(struct RCBnode));
 }
 
-// function for adding RCB to queue
+// Function for adding RCB to queue
 void addRCBtoQueue(RCB* rcb, Scheduler* sched){
   struct RCBnode* next;
   struct RCBnode* node;
-  if (sched->requestTable == NULL) {               // the queue is empty, so make a new node
+  if (sched->requestTable == NULL) {               // The queue is empty, so make a new node
     initRequestTable(sched);
-    node = sched->requestTable;      // we want to get the request table
+    node = sched->requestTable;      // We want to get the request table
     node->rcb = rcb;
   } else {
-    node = sched->requestTable;      // we want to get the request table
-    // if queue is empty, add to from
+    node = sched->requestTable;      // We want to get the request table
+    // If queue is empty, add to from
     while (node->next != NULL) {
       node = node->next;
     }
@@ -29,7 +29,7 @@ void addRCBtoQueue(RCB* rcb, Scheduler* sched){
     
 }
 
-// gets next request to process
+// Gets next request to process
 RCB* getNextRCB(Scheduler* sched){
   if (sched == NULL || sched->requestTable == NULL || sched->requestTable->rcb == NULL) {
         return NULL;
