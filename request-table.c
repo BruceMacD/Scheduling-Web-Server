@@ -6,18 +6,21 @@
 // TODO - make sure to free everything when we don't put it back in the queue
 void initRequestTable(Scheduler* sched) {
   sched->requestTable = (struct RCBnode*)malloc(sizeof(struct RCBnode));
+  sched->requestTable->next = NULL;
 }
 
 // function for adding RCB to queue
 void addRCBtoQueue(RCB* rcb, Scheduler* sched){
-  struct RCBnode* next;
-  struct RCBnode* node;
+  struct RCBnode* next = NULL;
+  struct RCBnode* node = NULL;
   if (sched->requestTable == NULL) {               // the queue is empty, so make a new node
+    
     printf("First node \n");
     initRequestTable(sched);
     node = sched->requestTable;      // we want to get the request table
     node->rcb = rcb;
   } else {
+      
     printf("Adding node to end \n");
     node = sched->requestTable;      // we want to get the request table
     // if queue is empty, add to from
@@ -25,6 +28,7 @@ void addRCBtoQueue(RCB* rcb, Scheduler* sched){
       node = node->next;
     }
     next = (struct RCBnode*)malloc(sizeof(struct RCBnode));
+    next->next = NULL;
     next->rcb = rcb;
     node->next = next;
   }
@@ -32,8 +36,8 @@ void addRCBtoQueue(RCB* rcb, Scheduler* sched){
 }
 
 void addRCBtoQueueForSJF(RCB* rcb, Scheduler* sched){
-    struct RCBnode* next;
-    struct RCBnode* node;
+    struct RCBnode* next = NULL;
+    struct RCBnode* node = NULL;
     int value;
     //Add node to empty list
     if (sched->requestTable == NULL) {               
@@ -75,9 +79,10 @@ RCB* getNextRCB(Scheduler* sched){
         return NULL;
   }
   RCB * next = sched->requestTable->rcb;
-  struct RCBnode* node = sched->requestTable;
-    
+  //struct RCBnode* node = sched->requestTable;
+    //printf("%d", sched->requestTable->rcb->clientFD);
+  free(sched->requestTable);
   sched->requestTable = sched->requestTable->next;
-  free(node);
+  
   return next;
 }

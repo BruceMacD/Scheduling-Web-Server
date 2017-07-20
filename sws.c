@@ -183,9 +183,12 @@ void processRequestRR(RCB* rcb, Scheduler* sched) {
         //otherwise add it to the end of the queue
         if (rcb->numBytesRemaining <= 0) {
                 //need to free things
-                free(rcb);
+            
+            
                 fclose(rcb->handle);
                 close(rcb->clientFD);
+            
+                free(rcb);
         } else {
                 addRCBtoQueue(rcb, sched);
         }
