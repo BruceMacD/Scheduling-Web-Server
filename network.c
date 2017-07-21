@@ -38,7 +38,7 @@ extern void network_wait() {
   fd_set err;
   
   if( serv_sock < 0 ) {                                 /* sanity check */
-    perror( "Error, network not initalized" );
+    perror( "Error, network not initialized" );
     abort();
   }
 
@@ -62,7 +62,7 @@ extern void network_wait() {
  *    integer file descriptor for the connection.  If no clients are 
  *    waiting, this function returns -1.
  * Parameters: None
- * Returns: A positive integer file decriptor to the next clients connection,
+ * Returns: A positive integer file descriptor to the next clients connection,
  *          or -1 if no client is waiting.
  */
 extern int network_open() {
@@ -75,7 +75,7 @@ extern int network_open() {
   struct timeval tv;                                    /* time to wait */
   
   if( serv_sock < 0 ) {                                 /* sanity check */
-    perror( "Error, network not initalized" );
+    perror( "Error, network not initialized" );
     abort();
   }
 
