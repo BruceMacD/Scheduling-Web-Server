@@ -28,6 +28,11 @@
 // global sequence counter
 int g_sequenceCounter = 1;
 
+//Scheduler Flags
+int type_SJF = 0;
+int type_RR = 0;
+int type_MLFB = 0;
+
 /* This function takes a file handle to a client, reads in the request,
  *    parses the request, and sends back the requested file.  If the
  *    request is improper or the file is not available, the appropriate
@@ -241,34 +246,16 @@ void processRequestMLFB(RCB* rcb, Scheduler* nextLevelSchedule, size_t max_size,
         }
     }
 }
-
-/* This function is where the program starts running.
- *    The function first parses its command line parameters to determine port #
- *    Then, it initializes, the network and enters the main loop.
- *    The main loop waits for a client (1 or more to connect, and then processes
- *    all clients by calling the seve_client() function for each one.
+/*
+ * Process requests and write their files to the output
  * Parameters:
- *             argc : number of command line parameters (including program name
- *             argv : array of pointers to command line parameters
- * Returns: an integer status code, 0 for success, something else for error.
+ *              Each type of scheduler
  */
-int main( int argc, char **argv ) {
-    int port = -1;                              /* server port # */
-    int fd;                                     /* client file descriptor */
-    //Scheduler Flags
-    int type_SJF = 0;
-    int type_RR = 0;
-    int type_MLFB = 0;
-    /* check for and process parameters
-     */
-    if( ( argc < 3 ) || ( sscanf( argv[1], "%d", &port ) < 1 ) ) {
-        printf( "usage: sms <port> <scheduler>\n" );
-        return 0;
-    }
+void ProcessRequests() {
+    /* client file descriptor */
+    int fd;
 
-    network_init( port );                       /* init network module */
-
-    // The schedulers
+    //The schedulers
     //SJF scheduler
     Scheduler schedSJF;
     schedSJF.requestTable = NULL;
@@ -286,21 +273,6 @@ int main( int argc, char **argv ) {
     schedMED.requestTable = NULL;
     schedMED.type = MLFB;
 
-    //find the scheduler type
-    if (strcmp(argv[2], "RR") == 0 || strcmp(argv[2], "rr") == 0) {
-        type_RR = 1;
-    }
-    else if (strcmp(argv[2], "SJF") == 0 || strcmp(argv[2], "sjf") == 0) {
-        type_SJF = 1;
-    }
-    else if (strcmp(argv[2], "MLFB") == 0 || strcmp(argv[2], "mlfb") == 0) {
-        type_MLFB = 1;
-    }
-    else {
-        printf( "invalid scheduler\n" );
-        return 0;
-    }
-
     for(;; ) {                                  /* main loop */
         network_wait();                   /* wait for clients */
 
@@ -315,10 +287,6 @@ int main( int argc, char **argv ) {
             else if (type_MLFB) {
                 //start mlfb in high schedule priority queue
                 serve_client( fd, &schedHIGH, MAX_HTTP_SIZE_8KB );
-            }
-            else {
-                printf( "invalid scheduler\n" );
-                return 0;
             }
         }
         // the next request
@@ -367,4 +335,42 @@ int main( int argc, char **argv ) {
             }
         }
     }
+}
+/* This function is where the program starts running.
+ *    The function first parses its command line parameters to determine port #
+ *    Then, it initializes, the network and enters the main loop.
+ *    The main loop waits for a client (1 or more to connect, and then processes
+ *    all clients by calling the seve_client() function for each one.
+ * Parameters:
+ *             argc : number of command line parameters (including program name
+ *             argv : array of pointers to command line parameters
+ * Returns: an integer status code, 0 for success, something else for error.
+ */
+int main( int argc, char **argv ) {
+    int port = -1;                              /* server port # */
+    /* check for and process parameters
+     */
+    if( ( argc < 3 ) || ( sscanf( argv[1], "%d", &port ) < 1 ) ) {
+        printf( "usage: sms <port> <scheduler>\n" );
+        return 0;
+    }
+
+    network_init( port );                       /* init network module */
+
+    //find the scheduler type
+    if (strcmp(argv[2], "RR") == 0 || strcmp(argv[2], "rr") == 0) {
+        type_RR = 1;
+    }
+    else if (strcmp(argv[2], "SJF") == 0 || strcmp(argv[2], "sjf") == 0) {
+        type_SJF = 1;
+    }
+    else if (strcmp(argv[2], "MLFB") == 0 || strcmp(argv[2], "mlfb") == 0) {
+        type_MLFB = 1;
+    }
+    else {
+        printf( "invalid scheduler\n" );
+        return 0;
+    }
+
+    ProcessRequests();
 }
