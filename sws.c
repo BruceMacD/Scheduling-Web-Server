@@ -142,9 +142,9 @@ void processRequestSJF(RCB* rcb, Scheduler* sched) {
 
         // close the file and connection
         //need to free things
-        free(rcb);
         fclose(rcb->handle);
         close(rcb->clientFD);
+        free(rcb);
 }
 
 // process request for Round Robin
