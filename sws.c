@@ -228,9 +228,9 @@ void processRequestMLFB(RCB* rcb, Scheduler* nextLevelSchedule, size_t max_size,
     //otherwise add it to the end of the queue
     if (rcb->numBytesRemaining <= 0) {
         //need to free things
-        free(rcb);
         fclose(rcb->handle);
         close(rcb->clientFD);
+        free(rcb);
     } else {
         if (nextLevelSchedule == NULL) {
             //scheduler needs to be initialized for next queue
