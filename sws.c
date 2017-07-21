@@ -45,21 +45,21 @@ static void serve_client( int fd, Scheduler* sched, size_t http_size ) {
         int len;                                    /* length of data read */
 
         if( !buffer ) {                             /* 1st time, alloc buffer */
-                buffer = malloc( http_size );
-                if( !buffer ) {                     /* error check */
-                        perror( "Error while allocating memory" );
-                        abort();
-                }
+			buffer = malloc( http_size );
+			if( !buffer ) {                     	/* error check */
+				perror( "Error while allocating memory" );
+				abort();
+			}
         }
 
         memset( buffer, 0, http_size );
         if( read( fd, buffer, http_size ) <= 0 ) { /* read req from client */
-                perror( "Error while reading request" );
-                abort();
+			perror( "Error while reading request" );
+			abort();
         }
 
         /* standard requests are of the form
-         *   GET /foo/bar/qux.html HTTP/1.1
+         * GET /foo/bar/qux.html HTTP/1.1
          * We want the second token (the file path).
          */
         tmp = strtok_r( buffer, " ", &brk );        /* parse request */
@@ -80,71 +80,70 @@ static void serve_client( int fd, Scheduler* sched, size_t http_size ) {
                         close( fd );
                 } else {                            /* if so, send file */
 
-                        // This will give us the size
-                        struct stat buf;
-                        fstat(fileno(fin), &buf);
+					// This will give us the size
+					struct stat buf;
+					fstat(fileno(fin), &buf);
 
-                        //create request control block
-                        RCB* rcb = (RCB*)malloc(sizeof(RCB));
-                        rcb->sequenceNum = g_sequenceCounter++;
-                        rcb->clientFD = fd;
-                        rcb->handle = fin;
-                        rcb->numBytesRemaining = (int)buf.st_size; // buf gives us the size remaining
-			//For SJF quantum is the entire file, call function to add RCB to correct position in queue
- 			if(sched->type ==1){
-			    rcb->quantum = (int)buf.st_size;
-			    addRCBtoQueueForSJF(rcb, sched);
+					//create request control block
+					RCB* rcb = (RCB*)malloc(sizeof(RCB));
+					rcb->sequenceNum = g_sequenceCounter++;
+					rcb->clientFD = fd;
+					rcb->handle = fin;
+					rcb->numBytesRemaining = (int)buf.st_size; // buf gives us the size remaining
+					//For SJF quantum is the entire file, call function to add RCB to correct position in queue
+					if(sched->type ==1){
+						rcb->quantum = (int)buf.st_size;
+						addRCBtoQueueForSJF(rcb, sched);
+					}
+					//For RR and MLFB, quantum is the size parameter, call function to add RCB to end of queue
+					else{
+						rcb->quantum = http_size;
+								//call the scheduler function to put this in the queue
+								addRCBtoQueue(rcb, sched);
+					} 
+					len = sprintf( buffer, "HTTP/1.1 200 OK\n\n" ); /* send success code */
+					write( fd, buffer, len );
 			}
-			//For RR and MLFB, quantum is the size parameter, call function to add RCB to end of queue
-			else{
-			    rcb->quantum = http_size;
-                            //call the scheduler function to put this in the queue
-                            addRCBtoQueue(rcb, sched);
-			} 
-                        len = sprintf( buffer, "HTTP/1.1 200 OK\n\n" ); /* send success code */
-                        write( fd, buffer, len );
-
-                }
         }
         //free(buffer);
 
-  //close( fd );                                     /* close client connectuin*/
+  //close( fd );                                     /* close client connection*/
 }
 // process request for Shortest Job First
 void processRequestSJF(RCB* rcb, Scheduler* sched) {
         // send entire file to the client
-        static char *buffer;                                  /* request buffer */
-        buffer = malloc( rcb->quantum );
-        if( !buffer ) {                     /* error check */
-            perror( "Error while allocating memory" );
-            abort();
-        }
-        long len;                                              /* length of data read */
+	static char *buffer;                                  	/* request buffer */
+	buffer = malloc( rcb->quantum );
+	if( !buffer ) {                     					/* error check */
+		perror( "Error while allocating memory" );
+		abort();
+	}
+	long len;                                              	/* length of data read */
 
-        len = fread( buffer, 1, rcb->quantum, rcb->handle); /* read file chunk */
+	len = fread( buffer, 1, rcb->quantum, rcb->handle); 	/* read file chunk */
 
 	//DEBUGGING, REMOVE
 	printf("QUANTUM: %d LENGTH: %ld \n", rcb->quantum, len);
 
-        if( len < 0 ) {                                 /* check for errors */
-                perror( "Error while writing to client" );
-        } else if( len > 0 ) {                            /* if none, send chunk */
+	if( len < 0 ) {                                 	/* check for errors */
+			perror( "Error while writing to client" );
+	} else if( len > 0 ) {                            	/* if none, send chunk */
 
-                len = write(rcb->clientFD, buffer, len);
-                // subtract from bytes remaining
-                rcb->numBytesRemaining -= len;
-                if( rcb->numBytesRemaining != 0 ) {                           /* check for errors */
-                        perror( "File was not transferred completely as expected" );
-                }
-        }                 /* the last chunk < 8192 */
+		len = write(rcb->clientFD, buffer, len);
+		// subtract from bytes remaining
+		rcb->numBytesRemaining -= len;
+		if( rcb->numBytesRemaining != 0 ) {                           /* check for errors */
+				perror( "File was not transferred completely as expected" );
+		}
+	}                 /* the last chunk < 8192 */
 
-        //printf("%s\n", buffer);
+	//printf("%s\n", buffer);
 
-        // close the file and connection
-        //need to free things
-        free(rcb);
-        fclose(rcb->handle);
-        close(rcb->clientFD);
+	// close the file and connection
+	//need to free things
+	free(rcb);
+	fclose(rcb->handle);
+	close(rcb->clientFD);
 }
 
 // process request for Round Robin
@@ -169,12 +168,12 @@ void processRequestRR(RCB* rcb, Scheduler* sched) {
                 perror( "Error while writing to client" );
         } else if( len > 0 ) {                            /* if none, send chunk */
 
-                len = write(rcb->clientFD, buffer, len);
-                // subtract from bytes remaining
-                rcb->numBytesRemaining -= len;
-                if( len < 1 ) {                           /* check for errors */
-                        perror( "Error while writing to client" );
-                }
+			len = write(rcb->clientFD, buffer, len);
+			// subtract from bytes remaining
+			rcb->numBytesRemaining -= len;
+			if( len < 1 ) {                           /* check for errors */
+					perror( "Error while writing to client" );
+			}
         }                 /* the last chunk < 8192 */
 
         //printf("%s\n", buffer);
@@ -204,8 +203,8 @@ void processRequestMLFB(RCB* rcb, Scheduler* nextLevelSchedule, size_t max_size,
 
         len = fread( buffer, 1, max_size, rcb->handle); /* read file chunk */
 
-	//DEBUGGING, REMOVE
-	printf("QUANTUM: %d LENGTH: %ld \n", rcb->quantum, len);
+		//DEBUGGING, REMOVE
+		printf("QUANTUM: %d LENGTH: %ld \n", rcb->quantum, len);
 
         if( len < 0 ) {                           /* check for errors */
                 perror( "Error while writing to client" );
@@ -252,7 +251,7 @@ void processRequestMLFB(RCB* rcb, Scheduler* nextLevelSchedule, size_t max_size,
 int main( int argc, char **argv ) {
         int port = -1;                              /* server port # */
         int fd;                                     /* client file descriptor */
-	//Scheduler Flags
+		//Scheduler Flags
         int type_SJF = 0;
         int type_RR = 0;
         int type_MLFB = 0;
@@ -268,12 +267,12 @@ int main( int argc, char **argv ) {
         // The schedulers
         //SJF scheduler
         Scheduler schedSJF;
-  	schedSJF.requestTable = NULL;
-	schedSJF.type = SJF;
+		schedSJF.requestTable = NULL;
+		schedSJF.type = SJF;
         //round robin
         Scheduler schedRR;
         schedRR.requestTable = NULL;
-	schedRR.type = RR;
+		schedRR.type = RR;
         //high priority
         Scheduler schedHIGH;
         schedHIGH.requestTable = NULL;
@@ -281,7 +280,7 @@ int main( int argc, char **argv ) {
         //medium priority
         Scheduler schedMED;
         schedMED.requestTable = NULL;
-	schedMED.type = MLFB;
+		schedMED.type = MLFB;
 
         //find the scheduler type
         if (strcmp(argv[2], "RR") == 0 || strcmp(argv[2], "rr") == 0) {
@@ -307,22 +306,22 @@ int main( int argc, char **argv ) {
                                 serve_client( fd, &schedRR, MAX_HTTP_SIZE_8KB );
                         }
                         else if (type_SJF) {
-				serve_client( fd, &schedSJF, MAX_HTTP_SIZE_8KB );
+							serve_client( fd, &schedSJF, MAX_HTTP_SIZE_8KB );
                         }
                         else if (type_MLFB) {
-                                //start mlfb in high schedule priority queue
-                                serve_client( fd, &schedHIGH, MAX_HTTP_SIZE_8KB );
+							//start mlfb in high schedule priority queue
+							serve_client( fd, &schedHIGH, MAX_HTTP_SIZE_8KB );
                         }
                         else {
-                                printf( "invalid scheduler\n" );
-                                return 0;
+							printf( "invalid scheduler\n" );
+							return 0;
                         }
                 }
                 // the next request
                 //TODO: Can this run for multiple clients with the same queue?
                 //TODO: Should be moved to a separate function for the multithreading portion
 
-		while (type_SJF && schedSJF.requestTable != NULL) {
+				while (type_SJF && schedSJF.requestTable != NULL) {
                         RCB* next = getNextRCB(&schedSJF);
                         if (next != NULL) {
                             //for debuging only

@@ -12,7 +12,7 @@
 
 /* 
  * This module has three functions:
- *   network_init() : inititalizes the module
+ *   network_init() : initializes the module
  *   network_wait() : wait until a client connects
  *   network_open() : open the next client connection
  *
@@ -58,7 +58,7 @@ extern void network_wait();
  *    integer file descriptor for the connection.  If no clients are 
  *    waiting, this function returns -1.
  * Parameters: None
- * Returns: A positive integer file decriptor to the next clients connection,
+ * Returns: A positive integer file descriptor to the next clients connection,
  *          or -1 if no client is waiting.
  */
 extern int network_open();
