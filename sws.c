@@ -13,6 +13,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <pthread.h>
 
 #include "network.h"
 #include "request-table.h"
@@ -251,7 +252,7 @@ void processRequestMLFB(RCB* rcb, Scheduler* nextLevelSchedule, size_t max_size,
  * Parameters:
  *              Each type of scheduler
  */
-void ProcessRequests() {
+static void * ProcessRequests(void * args) {
     /* client file descriptor */
     int fd;
 
@@ -348,14 +349,26 @@ void ProcessRequests() {
  */
 int main( int argc, char **argv ) {
     int port = -1;                              /* server port # */
+
+    //positive integer denoting the number of worker threads to create
+    int num_threads = -1;
+
     /* check for and process parameters
+     * Takes 3 args
      */
-    if( ( argc < 3 ) || ( sscanf( argv[1], "%d", &port ) < 1 ) ) {
-        printf( "usage: sms <port> <scheduler>\n" );
+    if( ( argc  > 4 ) || ( argc < 4 ) || ( sscanf( argv[1], "%d", &port ) < 0 )
+        || ( sscanf( argv[3], "%d", &num_threads ) < 1 ) ) {
+        printf( "usage: sms <port> <scheduler> <threads>\n" );
         return 0;
     }
 
     network_init( port );                       /* init network module */
+
+    //Initialize threads
+    pthread_t threads[num_threads];
+    for (int i = 0; i < num_threads; i++) {
+        pthread_create(&threads[i], NULL, &ProcessRequests, NULL);
+    }
 
     //find the scheduler type
     if (strcmp(argv[2], "RR") == 0 || strcmp(argv[2], "rr") == 0) {
@@ -372,5 +385,6 @@ int main( int argc, char **argv ) {
         return 0;
     }
 
-    ProcessRequests();
+    //TODO: running threads
+    //ProcessRequests();
 }
