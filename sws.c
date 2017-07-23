@@ -34,6 +34,16 @@ int type_SJF = 0;
 int type_RR = 0;
 int type_MLFB = 0;
 
+//The schedulers
+//SJF scheduler
+Scheduler schedSJF;
+//round robin
+Scheduler schedRR;
+//high priority
+Scheduler schedHIGH;
+//medium priority
+Scheduler schedMED;
+
 /* This function takes a file handle to a client, reads in the request,
  *    parses the request, and sends back the requested file.  If the
  *    request is improper or the file is not available, the appropriate
@@ -253,46 +263,11 @@ void processRequestMLFB(RCB* rcb, Scheduler* nextLevelSchedule, size_t max_size,
  *              Each type of scheduler
  */
 static void * ProcessRequests(void * args) {
-    /* client file descriptor */
-    int fd;
 
-    //The schedulers
-    //SJF scheduler
-    Scheduler schedSJF;
-    schedSJF.requestTable = NULL;
-    schedSJF.type = SJF;
-    //round robin
-    Scheduler schedRR;
-    schedRR.requestTable = NULL;
-    schedRR.type = RR;
-    //high priority
-    Scheduler schedHIGH;
-    schedHIGH.requestTable = NULL;
-    schedHIGH.type = MLFB;
-    //medium priority
-    Scheduler schedMED;
-    schedMED.requestTable = NULL;
-    schedMED.type = MLFB;
 
     for(;; ) {                                  /* main loop */
-        network_wait();                   /* wait for clients */
 
-        for( fd = network_open(); fd >= 0; fd = network_open() ) { /* get clients */                           /* process each client */
-            // create scheduler here, RR for now
-            if (type_RR) {
-                serve_client( fd, &schedRR, MAX_HTTP_SIZE_8KB );
-            }
-            else if (type_SJF) {
-                serve_client( fd, &schedSJF, MAX_HTTP_SIZE_8KB );
-            }
-            else if (type_MLFB) {
-                //start mlfb in high schedule priority queue
-                serve_client( fd, &schedHIGH, MAX_HTTP_SIZE_8KB );
-            }
-        }
-        // the next request
-        //TODO: Can this run for multiple clients with the same queue?
-        //TODO: Should be moved to a separate function for the multithreading portion
+        //TODO: dequeue a request
 
         while (type_SJF && schedSJF.requestTable != NULL) {
             RCB* next = getNextRCB(&schedSJF);
@@ -349,6 +324,21 @@ static void * ProcessRequests(void * args) {
  */
 int main( int argc, char **argv ) {
     int port = -1;                              /* server port # */
+    /* client file descriptor */
+    int fd;
+    pthread_t tid;
+    //init schedulers
+    schedSJF.requestTable = NULL;
+    schedSJF.type = SJF;
+    //round robin
+    schedRR.requestTable = NULL;
+    schedRR.type = RR;
+    //high priority
+    schedHIGH.requestTable = NULL;
+    schedHIGH.type = MLFB;
+    //medium priority
+    schedMED.requestTable = NULL;
+    schedMED.type = MLFB;
 
     //positive integer denoting the number of worker threads to create
     int num_threads = -1;
@@ -365,9 +355,8 @@ int main( int argc, char **argv ) {
     network_init( port );                       /* init network module */
 
     //Initialize threads
-    pthread_t threads[num_threads];
     for (int i = 0; i < num_threads; i++) {
-        pthread_create(&threads[i], NULL, &ProcessRequests, NULL);
+        pthread_create(&tid, NULL, &ProcessRequests, NULL);
     }
 
     //find the scheduler type
@@ -385,6 +374,21 @@ int main( int argc, char **argv ) {
         return 0;
     }
 
-    //TODO: running threads
-    //ProcessRequests();
+    for(;; ) {                                  /* main loop */
+        network_wait();                   /* wait for clients */
+
+        //TODO: enqueue new thread here
+        for (fd = network_open();
+             fd >= 0; fd = network_open()) { /* get clients */                           /* process each client */
+            // create scheduler here, RR for now
+            if (type_RR) {
+                serve_client(fd, &schedRR, MAX_HTTP_SIZE_8KB);
+            } else if (type_SJF) {
+                serve_client(fd, &schedSJF, MAX_HTTP_SIZE_8KB);
+            } else if (type_MLFB) {
+                //start mlfb in high schedule priority queue
+                serve_client(fd, &schedHIGH, MAX_HTTP_SIZE_8KB);
+            }
+        }
+    }
 }
