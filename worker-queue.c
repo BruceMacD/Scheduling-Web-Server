@@ -35,3 +35,17 @@ struct WorkerNode* createWorkerNode(pthread_t* thread) {
     node->next = NULL;
     return node;
 }
+
+// pop front front
+struct WorkerNode* popFrontWorkerQueue(struct WorkerNode** front) {
+    
+    pthread_t* p = (*front)->thread;
+    struct WorkerNode* new = createWorkerNode(p);
+    
+    //struct WorkerNode* node = front;
+    free(*front);
+    (*front) = (*front)->next;
+    
+    
+    return new;
+}

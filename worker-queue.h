@@ -26,3 +26,4 @@ struct WorkerNode {
 /* functions */
 void addWorkerToQueue(struct WorkerNode* add, struct WorkerNode* front);
 struct WorkerNode* createWorkerNode(pthread_t* thread);
+struct WorkerNode* popFrontWorkerQueue(struct WorkerNode** front);
