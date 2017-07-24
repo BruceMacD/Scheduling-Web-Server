@@ -17,6 +17,7 @@
 
 #include "network.h"
 #include "request-table.h"
+#include "worker-queue.h"
 
 #define MAX_HTTP_SIZE_8KB 8192
 #define MAX_HTTP_SIZE_64KB 65536                 /* size of buffer to allocate */
@@ -99,6 +100,7 @@ static void serve_client( int fd, Scheduler* sched, size_t http_size ) {
             // This will give us the size
             struct stat buf;
             fstat(fileno(fin), &buf);
+            
 
             //create request control block
             RCB* rcb = (RCB*)malloc(sizeof(RCB));
