@@ -27,6 +27,8 @@
 #define RR 2
 #define MLFB 3
 
+static
+
 // global sequence counter
 int g_sequenceCounter = 1;
 
@@ -34,6 +36,8 @@ int g_sequenceCounter = 1;
 int type_SJF = 0;
 int type_RR = 0;
 int type_MLFB = 0;
+
+struct WorkerNode * frontWorker = NULL;
 
 //The schedulers
 //SJF scheduler
@@ -270,47 +274,72 @@ static void * ProcessRequests(void * args) {
     for(;; ) {                                  /* main loop */
 
         //TODO: dequeue a request
+        //TODO: May need to put workers back in queue?
 
-        while (type_SJF && schedSJF.requestTable != NULL) {
-            RCB* next = getNextRCB(&schedSJF);
-            if (next != NULL) {
-                //for debuging only
-                printf( "Processing Shortest Job First Queue.\n" );
-                //process all requests in SJF
-                processRequestSJF(next, &schedSJF);
+        if (frontWorker != NULL) {
+            if (frontWorker->sched.type == SJF)
+            {
+                //set the scheduler to the front worker
+                schedSJF = popFrontWorkerQueue(frontWorker)->sched;
+                while (type_SJF && schedSJF.requestTable != NULL) {
+                    RCB* next = getNextRCB(&schedSJF);
+                    if (next != NULL) {
+                        //for debuging only
+                        printf( "Processing Shortest Job First Queue.\n" );
+                        //process all requests in SJF
+                        processRequestSJF(next, &schedSJF);
+                    }
+                }
             }
-        }
 
-        while (type_MLFB && schedHIGH.requestTable != NULL) {
-            RCB* next = getNextRCB(&schedHIGH);
-            if (next != NULL) {
-                //for debug
-                printf( "Processing high priority queue\n" );
-                //only the mlfb uses this scheduler
-                //processRequestMLFB(next RCB, next scheduler to put file in, this que size, next que size)
-                processRequestMLFB(next, &schedMED, MAX_HTTP_SIZE_8KB, MAX_HTTP_SIZE_64KB);
+            if (frontWorker->sched.type == RR) {
+                //set the scheduler to the front worker
+                schedRR = popFrontWorkerQueue(frontWorker)->sched;
+                while ((type_MLFB || type_RR) && schedRR.requestTable != NULL && schedMED.requestTable == NULL
+                       && schedHIGH.requestTable == NULL) {
+                    RCB* next = getNextRCB(&schedRR);
+                    if (next != NULL) {
+                        //for debug only
+                        printf( "Processing round robin queue.\n" );
+                        //process all requests in round robin
+                        processRequestRR(next, &schedRR);
+                    }
+                }
             }
-        }
+            //TODO: MLFB
+            /*
+            while (type_MLFB && schedHIGH.requestTable != NULL) {
+                RCB* next = getNextRCB(&schedHIGH);
+                if (next != NULL) {
+                    //for debug
+                    printf( "Processing high priority queue\n" );
+                    //only the mlfb uses this scheduler
+                    //processRequestMLFB(next RCB, next scheduler to put file in, this que size, next que size)
+                    processRequestMLFB(next, &schedMED, MAX_HTTP_SIZE_8KB, MAX_HTTP_SIZE_64KB);
+                }
+            }
 
-        //check the medium priority queue, it should break if there is a new file in high priority
-        while (type_MLFB && schedMED.requestTable != NULL && schedHIGH.requestTable == NULL) {
-            RCB* next = getNextRCB(&schedMED);
-            if (next != NULL) {
-                //for debug only
-                printf( "Processing medium priority queue.\n" );
-                processRequestMLFB(next, &schedRR, MAX_HTTP_SIZE_64KB, MAX_HTTP_SIZE_8KB);
+            //check the medium priority queue, it should break if there is a new file in high priority
+            while (type_MLFB && schedMED.requestTable != NULL && schedHIGH.requestTable == NULL) {
+                RCB* next = getNextRCB(&schedMED);
+                if (next != NULL) {
+                    //for debug only
+                    printf( "Processing medium priority queue.\n" );
+                    processRequestMLFB(next, &schedRR, MAX_HTTP_SIZE_64KB, MAX_HTTP_SIZE_8KB);
+                }
             }
-        }
 
-        while ((type_MLFB || type_RR) && schedRR.requestTable != NULL && schedMED.requestTable == NULL
-               && schedHIGH.requestTable == NULL) {
-            RCB* next = getNextRCB(&schedRR);
-            if (next != NULL) {
-                //for debug only
-                printf( "Processing round robin queue.\n" );
-                //process all requests in round robin
-                processRequestRR(next, &schedRR);
+            while ((type_MLFB || type_RR) && schedRR.requestTable != NULL && schedMED.requestTable == NULL
+                   && schedHIGH.requestTable == NULL) {
+                RCB* next = getNextRCB(&schedRR);
+                if (next != NULL) {
+                    //for debug only
+                    printf( "Processing round robin queue.\n" );
+                    //process all requests in round robin
+                    processRequestRR(next, &schedRR);
+                }
             }
+             */
         }
     }
 }
@@ -385,11 +414,17 @@ int main( int argc, char **argv ) {
             // create scheduler here, RR for now
             if (type_RR) {
                 serve_client(fd, &schedRR, MAX_HTTP_SIZE_8KB);
+                struct WorkerNode* newWorker = createWorkerNode(schedRR);
+                addWorkerToQueue(newWorker, frontWorker);
             } else if (type_SJF) {
                 serve_client(fd, &schedSJF, MAX_HTTP_SIZE_8KB);
+                struct WorkerNode* newWorker = createWorkerNode(schedSJF);
+                addWorkerToQueue(newWorker, frontWorker);
             } else if (type_MLFB) {
                 //start mlfb in high schedule priority queue
                 serve_client(fd, &schedHIGH, MAX_HTTP_SIZE_8KB);
+                struct WorkerNode* newWorker = createWorkerNode(schedHIGH);
+                addWorkerToQueue(newWorker, frontWorker);
             }
         }
     }

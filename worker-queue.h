@@ -19,11 +19,11 @@ addWorkerToQueue(newnode2, workerQueue);
 
 // for making the list/queue
 struct WorkerNode {
-    pthread_t* thread;
+    Scheduler sched;
     struct WorkerNode* next;
 };
 
 /* functions */
 void addWorkerToQueue(struct WorkerNode* add, struct WorkerNode* front);
-struct WorkerNode* createWorkerNode(pthread_t* thread);
+struct WorkerNode* createWorkerNode(Scheduler sched);
 struct WorkerNode* popFrontWorkerQueue(struct WorkerNode** front);

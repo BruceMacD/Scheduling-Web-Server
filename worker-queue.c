@@ -29,9 +29,9 @@ void addWorkerToQueue(struct WorkerNode* add, struct WorkerNode* front)
 }
 
 // instantiate a new node
-struct WorkerNode* createWorkerNode(pthread_t* thread) {
+struct WorkerNode* createWorkerNode(Scheduler sched) {
     struct WorkerNode* node = (struct WorkerNode*)malloc(sizeof(struct WorkerNode));
-    node->thread = thread;
+    node->sched = sched;
     node->next = NULL;
     return node;
 }
@@ -39,8 +39,8 @@ struct WorkerNode* createWorkerNode(pthread_t* thread) {
 // pop front front
 struct WorkerNode* popFrontWorkerQueue(struct WorkerNode** front) {
     
-    pthread_t* p = (*front)->thread;
-    struct WorkerNode* new = createWorkerNode(p);
+    Scheduler* s = (*front)->sched;
+    struct WorkerNode* new = createWorkerNode(s);
     
     //struct WorkerNode* node = front;
     free(*front);
