@@ -285,18 +285,23 @@ void processRequestMLFB(RCB* rcb, Scheduler* nextLevelSchedule, size_t max_size,
  *              Each type of scheduler
  */
 static void * ProcessRequests(void * args) {
+    static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
     WorkerThreadData* myWorkerThreadData = (WorkerThreadData*)args;
 
     for(;; ) {                                  /* main loop */
 
+
+        if( pthread_mutex_lock( &lock ) ) abort();
         //if we see an rcb, wake up
         if (myWorkerThreadData->workerQueue != NULL && myWorkerThreadData->workerQueue->rcb != NULL){
-         
+
+            printf( "Waking up\n" );
             //pop now
             struct WorkerNode *wq = popFrontWorkerQueue(&myWorkerThreadData->workerQueue);
             
             
             if(myWorkerThreadData->sched->type ==1){
+                printf( "adding to sjf\n" );
                 addRCBtoQueueForSJF(wq->rcb, myWorkerThreadData->sched);
             }
                 //For RR and MLFB, quantum is the size parameter, call function to add RCB to end of queue
@@ -349,8 +354,7 @@ static void * ProcessRequests(void * args) {
                 }
             }
         }
-
-        
+        pthread_mutex_unlock( &lock );
     }
 }
 
