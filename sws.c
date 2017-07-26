@@ -129,9 +129,6 @@ void processRequestSJF(RCB* rcb, Scheduler* sched) {
 
     len = fread( buffer, 1, rcb->quantum, rcb->handle); /* read file chunk */
 
-    //DEBUGGING, REMOVE
-    printf("QUANTUM: %d LENGTH: %ld \n", rcb->quantum, len);
-
     if( len < 0 ) {                                 /* check for errors */
         perror( "Error while writing to client" );
     } else if( len > 0 ) {                            /* if none, send chunk */
@@ -146,6 +143,9 @@ void processRequestSJF(RCB* rcb, Scheduler* sched) {
 
     // close the file and connection
     //need to free things
+    printf( "Request %d completed\n", rcb->sequenceNum );
+    fflush(stdout);
+    
     fclose(rcb->handle);
     close(rcb->clientFD);
     free(rcb);
@@ -164,9 +164,6 @@ void processRequestRR(RCB* rcb, Scheduler* sched) {
 
     len = fread( buffer, 1, MAX_HTTP_SIZE_8KB, rcb->handle); /* read file chunk */
 
-    //DEBUGGING, REMOVE
-    printf("QUANTUM: %d LENGTH: %ld \n", rcb->quantum, len);
-
     if( len < 0 ) {                                 /* check for errors */
         perror( "Error while writing to client" );
     } else if( len > 0 ) {                            /* if none, send chunk */
@@ -184,10 +181,11 @@ void processRequestRR(RCB* rcb, Scheduler* sched) {
     //otherwise add it to the end of the queue
     if (rcb->numBytesRemaining <= 0) {
         //need to free things
+        printf( "Request %d completed\n", rcb->sequenceNum );
+        fflush(stdout);
 
         fclose(rcb->handle);
         close(rcb->clientFD);
-
         free(rcb);
     } else {
         addRCBtoQueue(rcb, sched);
@@ -207,9 +205,6 @@ void processRequestMLFB(RCB* rcb, Scheduler* nextLevelSchedule, size_t max_size,
 
     len = fread( buffer, 1, max_size, rcb->handle); /* read file chunk */
 
-    //DEBUGGING, REMOVE
-    printf("QUANTUM: %d LENGTH: %ld \n", rcb->quantum, len);
-
     if( len < 0 ) {                           /* check for errors */
         perror( "Error while writing to client" );
     } else if( len > 0 ) {                      /* if none, send chunk */
@@ -225,6 +220,9 @@ void processRequestMLFB(RCB* rcb, Scheduler* nextLevelSchedule, size_t max_size,
     // if this was the end, close the file and connection,
     //otherwise add it to the end of the queue
     if (rcb->numBytesRemaining <= 0) {
+        printf( "Request %d completed\n", rcb->sequenceNum );
+        fflush(stdout);
+
         //need to free things
         fclose(rcb->handle);
         close(rcb->clientFD);
@@ -292,8 +290,6 @@ void ProcessRequests() {
             if( pthread_mutex_lock( &lock ) ) abort();
             RCB* next = getNextRCB(&schedSJF);
             if (next != NULL) {
-                //for debuging only
-                printf( "Processing Shortest Job First Queue.\n" );
                 //process all requests in SJF
                 processRequestSJF(next, &schedSJF);
             }
@@ -304,8 +300,6 @@ void ProcessRequests() {
             if( pthread_mutex_lock( &lock ) ) abort();
             RCB* next = getNextRCB(&schedHIGH);
             if (next != NULL) {
-                //for debug
-                printf( "Processing high priority queue\n" );
                 //only the mlfb uses this scheduler
                 //processRequestMLFB(next RCB, next scheduler to put file in, this que size, next que size)
                 processRequestMLFB(next, &schedMED, MAX_HTTP_SIZE_8KB, MAX_HTTP_SIZE_64KB);
@@ -318,8 +312,6 @@ void ProcessRequests() {
             if( pthread_mutex_lock( &lock ) ) abort();
             RCB* next = getNextRCB(&schedMED);
             if (next != NULL) {
-                //for debug only
-                printf( "Processing medium priority queue.\n" );
                 processRequestMLFB(next, &schedRR, MAX_HTTP_SIZE_64KB, MAX_HTTP_SIZE_8KB);
             }
             pthread_mutex_unlock( &lock );
@@ -330,8 +322,6 @@ void ProcessRequests() {
             if( pthread_mutex_lock( &lock ) ) abort();
             RCB* next = getNextRCB(&schedRR);
             if (next != NULL) {
-                //for debug only
-                printf( "Processing round robin queue.\n" );
                 //process all requests in round robin
                 processRequestRR(next, &schedRR);
             }

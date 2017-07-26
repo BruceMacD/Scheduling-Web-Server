@@ -1,0 +1,7 @@
+Title: Test 0 - Small Immediate File
+Group number: 4
+Purpose: Serve a request for one small file at zero seconds.
+How it works: A file of size 378 bytes is requested as soon as the client connects.
+Expected result: SJF: The file is finished in one step
+                 RR: The file is finished in one step
+                 MLFB: The file is finished in the high priority queue
