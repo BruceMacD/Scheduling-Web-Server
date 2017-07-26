@@ -290,12 +290,11 @@ static void * ProcessRequests(void * args) {
 
     for(;; ) {                                  /* main loop */
 
-
+        //avoid faults
         if( pthread_mutex_lock( &lock ) ) abort();
         //if we see an rcb, wake up
         if (myWorkerThreadData->workerQueue != NULL && myWorkerThreadData->workerQueue->rcb != NULL){
 
-            printf( "Waking up\n" );
             //pop now
             struct WorkerNode *wq = popFrontWorkerQueue(&myWorkerThreadData->workerQueue);
             
@@ -303,6 +302,8 @@ static void * ProcessRequests(void * args) {
             if(myWorkerThreadData->sched->type ==1){
                 printf( "adding to sjf\n" );
                 addRCBtoQueueForSJF(wq->rcb, myWorkerThreadData->sched);
+                //TODO: need to free for other schedulers
+                free(wq);
             }
                 //For RR and MLFB, quantum is the size parameter, call function to add RCB to end of queue
             else{
