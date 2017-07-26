@@ -19,7 +19,7 @@ LINK = $(CC) $(CFLAGS) -o $@
 all: sws
 
 $(PROGRAM): $(OBJS) $(ADD_OBJS)
-	$(LINK) $(OBJS) $(ADD_OBJS)
+	$(LINK) $(OBJS) $(ADD_OBJS) -l pthread
 
 lib: sws_gold.o 
 	 ar -r libxsws.a sws_gold.o
