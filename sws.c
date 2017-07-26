@@ -285,31 +285,36 @@ void processRequestMLFB(RCB* rcb, Scheduler* nextLevelSchedule, size_t max_size,
  *              Each type of scheduler
  */
 static void * ProcessRequests(void * args) {
-    static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+    //static pthread_mutex_t workerqueue_lock = PTHREAD_MUTEX_INITIALIZER;
     WorkerThreadData* myWorkerThreadData = (WorkerThreadData*)args;
 
     for(;; ) {                                  /* main loop */
 
         //avoid faults
-        if( pthread_mutex_lock( &lock ) ) abort();
+        
         //if we see an rcb, wake up
-        if (myWorkerThreadData->workerQueue != NULL && myWorkerThreadData->workerQueue->rcb != NULL){
-
+        // && myWorkerThreadData->workerQueue->rcb != NULL
+        if (myWorkerThreadData->workerQueue != NULL){
+            
+            //if( pthread_mutex_lock( &workerqueue_lock ) ) abort();
             //pop now
             struct WorkerNode *wq = popFrontWorkerQueue(&myWorkerThreadData->workerQueue);
             
+            //pthread_mutex_unlock( &workerqueue_lock );
             
-            if(myWorkerThreadData->sched->type ==1){
-                printf( "adding to sjf\n" );
-                addRCBtoQueueForSJF(wq->rcb, myWorkerThreadData->sched);
-                //TODO: need to free for other schedulers
-                free(wq);
-            }
-                //For RR and MLFB, quantum is the size parameter, call function to add RCB to end of queue
-            else{
-                //workerThreadData.workerQueue->rcb->quantum = http_size;
-                //call the scheduler function to put this in the queue
-                addRCBtoQueue(wq->rcb, myWorkerThreadData->sched);
+            if (wq != NULL) {
+                if(myWorkerThreadData->sched->type ==1){
+                    printf( "adding to sjf\n" );
+                    addRCBtoQueueForSJF(wq->rcb, myWorkerThreadData->sched);
+                    //TODO: need to free for other schedulers
+                    free(wq);
+                }
+                    //For RR and MLFB, quantum is the size parameter, call function to add RCB to end of queue
+                else{
+                    //workerThreadData.workerQueue->rcb->quantum = http_size;
+                    //call the scheduler function to put this in the queue
+                    addRCBtoQueue(wq->rcb, myWorkerThreadData->sched);
+                }
             }
             
             
@@ -354,8 +359,9 @@ static void * ProcessRequests(void * args) {
                     processRequestRR(next, &schedRR);
                 }
             }
+            
         }
-        pthread_mutex_unlock( &lock );
+        
     }
 }
 
