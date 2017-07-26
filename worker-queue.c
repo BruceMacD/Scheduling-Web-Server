@@ -13,7 +13,11 @@ void addWorkerToQueue(struct WorkerNode* add, struct WorkerNode** front)
 {
     
     // this is all critical section, only one thread should do it at a time
+    static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
     struct WorkerNode* node = *front;
+
+    //check lock
+    if( pthread_mutex_lock( &lock ) ) abort();
     
     if (node == NULL) {
         *front = add;
@@ -29,6 +33,7 @@ void addWorkerToQueue(struct WorkerNode* add, struct WorkerNode** front)
         node = node->next;
     }
     node->next = add;
+    pthread_mutex_unlock( &lock );
 }
 
 // instantiate a new node
@@ -43,6 +48,11 @@ struct WorkerNode* createWorkerNode(RCB *rcb) {
 struct WorkerNode* popFrontWorkerQueue(struct WorkerNode** front) {
     
     // this is all critical section, only one thread should do it at a time
+    static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+
+    //check lock
+    if( pthread_mutex_lock( &lock ) ) abort();
+
     if (front == NULL) {
         return NULL;
     }
@@ -54,7 +64,7 @@ struct WorkerNode* popFrontWorkerQueue(struct WorkerNode** front) {
     free(*front);
     (*front) = (*front)->next;
     
-    
+    pthread_mutex_unlock( &lock );
     return new;
 }
 

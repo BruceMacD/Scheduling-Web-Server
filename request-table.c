@@ -1,6 +1,7 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <pthread.h>
 #include "request-table.h"
 
 // TODO - make sure to free everything when we don't put it back in the queue
@@ -13,9 +14,14 @@ void initRequestTable(Scheduler* sched) {
 void addRCBtoQueue(RCB* rcb, Scheduler* sched){
     
     //critical section, only one thread at a time can do this
+    static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
     
     struct RCBnode* next = NULL;
     struct RCBnode* node = NULL;
+
+    //check lock
+    if( pthread_mutex_lock( &lock ) ) abort();
+
     if (sched->requestTable == NULL) {               // the queue is empty, so make a new node
 
         printf("First node \n");
@@ -35,16 +41,21 @@ void addRCBtoQueue(RCB* rcb, Scheduler* sched){
         next->rcb = rcb;
         node->next = next;
     }
-
+    pthread_mutex_unlock( &lock );
 }
 
 void addRCBtoQueueForSJF(RCB* rcb, Scheduler* sched){
     
     //critical section, only one thread at a time can do this
+    static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
     
     struct RCBnode* next = NULL;
     struct RCBnode* node = NULL;
     int value;
+
+    //check lock
+    if( pthread_mutex_lock( &lock ) ) abort();
+
     //Add node to empty list
     if (sched->requestTable == NULL) {
         printf("First node \n");
@@ -80,6 +91,7 @@ void addRCBtoQueueForSJF(RCB* rcb, Scheduler* sched){
             node->next = next;
         }
     }
+    pthread_mutex_unlock( &lock );
 }
 
 // gets next request to process
