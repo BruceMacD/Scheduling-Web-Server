@@ -291,17 +291,19 @@ static void * ProcessRequests(void * args) {
 
         //if we see an rcb, wake up
         if (myWorkerThreadData->workerQueue != NULL && myWorkerThreadData->workerQueue->rcb != NULL){
-            
+         
+            //pop now
+            struct WorkerNode *wq = popFrontWorkerQueue(&myWorkerThreadData->workerQueue);
             
             
             if(myWorkerThreadData->sched->type ==1){
-                addRCBtoQueueForSJF(myWorkerThreadData->workerQueue->rcb, myWorkerThreadData->sched);
+                addRCBtoQueueForSJF(wq->rcb, myWorkerThreadData->sched);
             }
                 //For RR and MLFB, quantum is the size parameter, call function to add RCB to end of queue
             else{
                 //workerThreadData.workerQueue->rcb->quantum = http_size;
                 //call the scheduler function to put this in the queue
-                addRCBtoQueue(myWorkerThreadData->workerQueue->rcb, myWorkerThreadData->sched);
+                addRCBtoQueue(wq->rcb, myWorkerThreadData->sched);
             }
             
             
