@@ -9,18 +9,21 @@
 #include "worker-queue.h"
 
 /* add the workers to the worker queue */
-void addWorkerToQueue(struct WorkerNode* add, struct WorkerNode* front)
+void addWorkerToQueue(struct WorkerNode* add, struct WorkerNode** front)
 {
-    struct WorkerNode* node = front;
+    
+    // this is all critical section, only one thread should do it at a time
+    struct WorkerNode* node = *front;
     
     if (node == NULL) {
-        front = add;
+        *front = add;
         return;
     }
     
     if (add == NULL) {
         return;
     }
+    
     
     while (node->next != NULL) {
         node = node->next;
@@ -29,9 +32,9 @@ void addWorkerToQueue(struct WorkerNode* add, struct WorkerNode* front)
 }
 
 // instantiate a new node
-struct WorkerNode* createWorkerNode(pthread_t* thread) {
+struct WorkerNode* createWorkerNode(RCB *rcb) {
     struct WorkerNode* node = (struct WorkerNode*)malloc(sizeof(struct WorkerNode));
-    node->thread = thread;
+    node->rcb = rcb;
     node->next = NULL;
     return node;
 }
@@ -39,8 +42,13 @@ struct WorkerNode* createWorkerNode(pthread_t* thread) {
 // pop front front
 struct WorkerNode* popFrontWorkerQueue(struct WorkerNode** front) {
     
-    pthread_t* p = (*front)->thread;
-    struct WorkerNode* new = createWorkerNode(p);
+    // this is all critical section, only one thread should do it at a time
+    if (front == NULL) {
+        return NULL;
+    }
+
+    RCB * rcb = (*front)->rcb;
+    struct WorkerNode* new = createWorkerNode(rcb);
     
     //struct WorkerNode* node = front;
     free(*front);
@@ -49,3 +57,4 @@ struct WorkerNode* popFrontWorkerQueue(struct WorkerNode** front) {
     
     return new;
 }
+

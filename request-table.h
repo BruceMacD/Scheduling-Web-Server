@@ -1,3 +1,5 @@
+#ifndef REQUESTTABLE_H
+#define REQUESTTABLE_H
 /*
 * Holds RCB table and RCB node things
 */
@@ -34,3 +36,5 @@ RCB* getNextRCB(Scheduler* sched);
 
 // inits the request table with malloc
 void initRequestTable(Scheduler* sched);
+
+#endif /* REQUESTTABLE_H */

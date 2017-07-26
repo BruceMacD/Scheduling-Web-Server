@@ -11,6 +11,9 @@ void initRequestTable(Scheduler* sched) {
 
 // function for adding RCB to queue
 void addRCBtoQueue(RCB* rcb, Scheduler* sched){
+    
+    //critical section, only one thread at a time can do this
+    
     struct RCBnode* next = NULL;
     struct RCBnode* node = NULL;
     if (sched->requestTable == NULL) {               // the queue is empty, so make a new node
@@ -36,6 +39,9 @@ void addRCBtoQueue(RCB* rcb, Scheduler* sched){
 }
 
 void addRCBtoQueueForSJF(RCB* rcb, Scheduler* sched){
+    
+    //critical section, only one thread at a time can do this
+    
     struct RCBnode* next = NULL;
     struct RCBnode* node = NULL;
     int value;

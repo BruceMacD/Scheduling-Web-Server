@@ -1,3 +1,5 @@
+#ifndef WORKQUEUE_H
+#define WORKQUEUE_H
 /* worker queue stuff
 
  run like this, first make a front node, then add susequent nodes
@@ -14,16 +16,25 @@ addWorkerToQueue(newnode2, workerQueue);
 
 
 #include <pthread.h>
+#include "request-table.h"
 
 
 
 // for making the list/queue
 struct WorkerNode {
-    pthread_t* thread;
+    RCB *rcb;
     struct WorkerNode* next;
 };
 
+// this gets passed to the threads
+typedef struct {
+    struct WorkerNode* workerQueue;
+    Scheduler* sched;
+}WorkerThreadData;
+
 /* functions */
-void addWorkerToQueue(struct WorkerNode* add, struct WorkerNode* front);
-struct WorkerNode* createWorkerNode(pthread_t* thread);
+void addWorkerToQueue(struct WorkerNode* add, struct WorkerNode** front);
+struct WorkerNode* createWorkerNode(RCB *rcb);
 struct WorkerNode* popFrontWorkerQueue(struct WorkerNode** front);
+
+#endif /* WORKQUEUE_H */
