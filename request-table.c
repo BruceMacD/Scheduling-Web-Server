@@ -4,6 +4,8 @@
 #include <pthread.h>
 #include "request-table.h"
 
+
+
 pthread_mutex_t requesttable_lock = PTHREAD_MUTEX_INITIALIZER;
 
 // TODO - make sure to free everything when we don't put it back in the queue
@@ -26,13 +28,14 @@ void addRCBtoQueue(RCB* rcb, Scheduler* sched){
 
     if (sched->requestTable == NULL) {               // the queue is empty, so make a new node
 
-        printf("First node \n");
+        //printf("First node \n");
+        //printf("Request for file %s admitted", rcb->path);
         initRequestTable(sched);
         node = sched->requestTable;      // we want to get the request table
         node->rcb = rcb;
     } else {
 
-        printf("Adding node to end \n");
+        //printf("Adding node to end \n");
         node = sched->requestTable;      // we want to get the request table
         // if queue is empty, add to from
         while (node->next != NULL) {
@@ -43,6 +46,7 @@ void addRCBtoQueue(RCB* rcb, Scheduler* sched){
         next->rcb = rcb;
         node->next = next;
     }
+    
     pthread_mutex_unlock( &requesttable_lock );
 }
 
@@ -60,7 +64,7 @@ void addRCBtoQueueForSJF(RCB* rcb, Scheduler* sched){
 
     //Add node to empty list
     if (sched->requestTable == NULL) {
-        printf("First node \n");
+        //printf("First node \n");
         initRequestTable(sched);
         node = sched->requestTable;
         node->next = NULL;
@@ -72,7 +76,8 @@ void addRCBtoQueueForSJF(RCB* rcb, Scheduler* sched){
         value = rcb->numBytesRemaining;
         //Add node to front of list
         if(node->rcb->numBytesRemaining > value){
-            printf("Adding node to front \n");
+            //printf("Adding node to front \n");
+            //printf("Request for file %s admitted", rcb->path);
             next = (struct RCBnode*)malloc(sizeof(struct RCBnode));
             next->next = NULL;
             next->rcb = node->rcb;
@@ -82,7 +87,7 @@ void addRCBtoQueueForSJF(RCB* rcb, Scheduler* sched){
         }
             //Add node between two nodes
         else{
-            printf("Adding Node\n");
+            //printf("Adding Node\n");
             while (node->next != NULL && node->next->rcb->numBytesRemaining < value) {
                 node = node->next;
             }
@@ -93,6 +98,7 @@ void addRCBtoQueueForSJF(RCB* rcb, Scheduler* sched){
             node->next = next;
         }
     }
+    
     pthread_mutex_unlock( &requesttable_lock );
 }
 

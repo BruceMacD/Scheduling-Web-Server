@@ -1,5 +1,6 @@
 #ifndef REQUESTTABLE_H
 #define REQUESTTABLE_H
+#define PATH_MAX 128
 /*
 * Holds RCB table and RCB node things
 */
@@ -11,6 +12,7 @@ typedef struct {
   FILE * handle;
   int numBytesRemaining; // number remain to be sent
   int quantum; // max number bytes to be sent
+  char path[PATH_MAX]; // holds path for printing
 } RCB;
 
 // for making the list/queue

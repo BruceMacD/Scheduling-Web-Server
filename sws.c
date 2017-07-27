@@ -113,6 +113,7 @@ static void serve_client( int fd, Scheduler* sched, size_t http_size ) {
             rcb->sequenceNum = g_sequenceCounter++;
             rcb->clientFD = fd;
             rcb->handle = fin;
+            strncpy(rcb->path, req, 128);
             rcb->numBytesRemaining = (int)buf.st_size; // buf gives us the size remaining
             //For SJF quantum is the entire file, call function to add RCB to correct position in queue
             
@@ -127,18 +128,8 @@ static void serve_client( int fd, Scheduler* sched, size_t http_size ) {
                 rcb->quantum = http_size;
             }
             
-            /////////move parts of this to pthread
-            
-//            if(sched->type ==1){
-//                rcb->quantum = (int)buf.st_size;
-//                addRCBtoQueueForSJF(rcb, sched);
-//            }
-//                //For RR and MLFB, quantum is the size parameter, call function to add RCB to end of queue
-//            else{
-//                rcb->quantum = http_size;
-//                //call the scheduler function to put this in the queue
-//                addRCBtoQueue(rcb, sched);
-//            }
+
+
             len = sprintf( buffer, "HTTP/1.1 200 OK\n\n" ); /* send success code */
             write( fd, buffer, len );
 
@@ -161,13 +152,12 @@ void processRequestSJF(RCB* rcb, Scheduler* sched) {
 
     len = fread( buffer, 1, rcb->quantum, rcb->handle); /* read file chunk */
 
-    //DEBUGGING, REMOVE
-    printf("QUANTUM: %d LENGTH: %ld \n", rcb->quantum, len);
-
+    
     if( len < 0 ) {                                 /* check for errors */
         perror( "Error while writing to client" );
     } else if( len > 0 ) {                            /* if none, send chunk */
-
+        
+        printf("Sent %d bytes of file %s\n", rcb->numBytesRemaining, rcb->path);
         len = write(rcb->clientFD, buffer, len);
         // subtract from bytes remaining
         rcb->numBytesRemaining -= len;
@@ -177,9 +167,11 @@ void processRequestSJF(RCB* rcb, Scheduler* sched) {
     }                 /* the last chunk < 8192 */
 
     //printf("%s\n", buffer);
+    
 
     // close the file and connection
     //need to free things
+    printf("Request for file %s completed.", rcb->path);
     fclose(rcb->handle);
     close(rcb->clientFD);
     free(rcb);
@@ -200,9 +192,13 @@ void processRequestRR(RCB* rcb, Scheduler* sched) {
 
     len = fread( buffer, 1, MAX_HTTP_SIZE_8KB, rcb->handle); /* read file chunk */
 
-    //DEBUGGING, REMOVE
-    printf("QUANTUM: %d LENGTH: %ld \n", rcb->quantum, len);
-
+    int amount = rcb->quantum;
+    if (rcb->numBytesRemaining < rcb->quantum) {
+        amount = rcb->numBytesRemaining;
+    }
+    printf("Sent %d bytes of file %s\n", amount, rcb->path);
+    
+    
     if( len < 0 ) {                                 /* check for errors */
         perror( "Error while writing to client" );
     } else if( len > 0 ) {                            /* if none, send chunk */
@@ -222,7 +218,7 @@ void processRequestRR(RCB* rcb, Scheduler* sched) {
     if (rcb->numBytesRemaining <= 0) {
         //need to free things
 
-
+        printf("Request for file %s completed.\n", rcb->path);
         fclose(rcb->handle);
         close(rcb->clientFD);
         free(rcb);
@@ -304,9 +300,10 @@ static void * ProcessRequests(void * args) {
             
             if (wq != NULL) {
                 if(myWorkerThreadData->sched->type ==1){
-                    printf( "adding to sjf\n" );
+                    //printf( "adding to sjf\n" );
+                    printf("Request for file %s admitted", wq->rcb->path);
                     addRCBtoQueueForSJF(wq->rcb, myWorkerThreadData->sched);
-                    //TODO: need to free for other schedulers
+                    //need to free for other schedulers
                     free(wq);
                 }
                     //For RR and MLFB, quantum is the size parameter, call function to add RCB to end of queue
@@ -322,7 +319,8 @@ static void * ProcessRequests(void * args) {
                 RCB* next = getNextRCB(&schedSJF);
                 if (next != NULL) {
                     //for debuging only
-                    printf( "Processing Shortest Job First Queue.\n" );
+                    //printf( "Processing Shortest Job First Queue.\n" );
+                    printf("Request for file %s admitted\n", wq->rcb->path);
                     //process all requests in SJF
                     processRequestSJF(next, &schedSJF);
                 }
@@ -332,7 +330,8 @@ static void * ProcessRequests(void * args) {
                 RCB* next = getNextRCB(&schedHIGH);
                 if (next != NULL) {
                     //for debug
-                    printf( "Processing high priority queue\n" );
+                    //printf( "Processing high priority queue\n" );
+                    printf("Request for file %s admitted\n", wq->rcb->path);
                     //only the mlfb uses this scheduler
                     //processRequestMLFB(next RCB, next scheduler to put file in, this que size, next que size)
                     processRequestMLFB(next, &schedMED, MAX_HTTP_SIZE_8KB, MAX_HTTP_SIZE_64KB);
