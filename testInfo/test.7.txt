@@ -1,12 +1,9 @@
-Title: Test 2 - Two Small Files With Request Delay
+Title: Test 7 - 100 files of scattered sizes
 Group number: 4
-Purpose: Serve a request for two small files, one at zero seconds then another
-         after 2 seconds.
-How it works: One file requested as soon as the client connects, the next is
-              requested 2 seconds later.
-Expected result: SJF: The files are both finished in one step each, with request
-                      at zero seconds being completed before the second request
-                      arrives.
+Purpose: Test that many files will behave properly
+How it works: All 100 files are fed in at once.
+Expected result: SJF: Files are finished once after another, in increasing order
+					of size.
                  RR: The files are both finished in one step each, with request
                      at zero seconds being completed before the second request
                      arrives.
