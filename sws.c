@@ -435,6 +435,11 @@ int main( int argc, char **argv ) {
 
     network_init( port );                       /* init network module */
 
+    if (num_threads > 100) {
+        //can only have 100 threads maximum
+        printf( "Error: maximum 100 threads\n" );
+        return 0;
+    }
     //Initialize threads
     for (int i = 0; i < num_threads; i++) {
         pthread_create(&tid, NULL, &ProcessRequests, &workerThreadData);
