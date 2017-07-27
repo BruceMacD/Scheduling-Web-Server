@@ -6,7 +6,7 @@ Group number: 4
 Purpose: Serve a request for one large, 81 KB file at zero seconds.
 How it works: A file of size 81 KB is requested as soon as the client connects.
 Expected result: SJF: The file is processed immediately
-                 RR: The file is processed in Y**** steps
+                 RR: The file is processed in 10 steps
                  MLFB: The file is processed using all three levels of the queue
 --------------------				 
 Filler text:
@@ -306,6 +306,7 @@ Andouille brisket pork belly bresaola sausage picanha capicola corned beef porch
 
 Turkey hamburger andouille bacon tail pork loin bresaola meatball kevin picanha boudin biltong beef. Chuck landjaeger pork belly cow short ribs. Pastrami ball tip flank chuck. Landjaeger picanha pork belly pastrami ball tip sirloin doner pancetta burgdoggen. Flank tenderloin tail, short ribs pork chop spare ribs rump chicken ham hock tri-tip cupim. Shank bacon tail, strip steak leberkas drumstick salami ground round meatloaf kevin andouille short ribs.
 Does your lorem ipsum text long for something a little meatier? Give our generator a try… it’s tasty!
+
 Thread 2 ============================================
 HTTP/1.1 200 OK
 
