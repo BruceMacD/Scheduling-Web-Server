@@ -17,6 +17,7 @@
 
 #include "network.h"
 #include "request-table.h"
+#include "worker-queue.h"
 
 #define MAX_HTTP_SIZE_8KB 8192
 #define MAX_HTTP_SIZE_64KB 65536                 /* size of buffer to allocate */
@@ -33,6 +34,22 @@ int g_sequenceCounter = 1;
 int type_SJF = 0;
 int type_RR = 0;
 int type_MLFB = 0;
+
+//The schedulers
+//SJF scheduler
+Scheduler schedSJF;
+//round robin
+Scheduler schedRR;
+//high priority
+Scheduler schedHIGH;
+//medium priority
+Scheduler schedMED;
+
+WorkerThreadData workerThreadData;         /* what goes to pthreads */
+//the worker queue
+struct WorkerNode* workerQueue;
+
+
 
 /* This function takes a file handle to a client, reads in the request,
  *    parses the request, and sends back the requested file.  If the
@@ -90,23 +107,29 @@ static void serve_client( int fd, Scheduler* sched, size_t http_size ) {
             struct stat buf;
             fstat(fileno(fin), &buf);
 
+
             //create request control block
             RCB* rcb = (RCB*)malloc(sizeof(RCB));
             rcb->sequenceNum = g_sequenceCounter++;
             rcb->clientFD = fd;
             rcb->handle = fin;
+            strncpy(rcb->path, req, 128);
             rcb->numBytesRemaining = (int)buf.st_size; // buf gives us the size remaining
             //For SJF quantum is the entire file, call function to add RCB to correct position in queue
+
+            // instead of inserting to sched, insert to worker queue
+            struct WorkerNode* workerNode = createWorkerNode(rcb);
+            addWorkerToQueue(workerNode, &workerThreadData.workerQueue);
+            //workerThreadData.workerQueue = workerQueue;
+
             if(sched->type ==1){
                 rcb->quantum = (int)buf.st_size;
-                addRCBtoQueueForSJF(rcb, sched);
-            }
-                //For RR and MLFB, quantum is the size parameter, call function to add RCB to end of queue
-            else{
+            }else{
                 rcb->quantum = http_size;
-                //call the scheduler function to put this in the queue
-                addRCBtoQueue(rcb, sched);
             }
+
+
+
             len = sprintf( buffer, "HTTP/1.1 200 OK\n\n" ); /* send success code */
             write( fd, buffer, len );
 
@@ -129,10 +152,12 @@ void processRequestSJF(RCB* rcb, Scheduler* sched) {
 
     len = fread( buffer, 1, rcb->quantum, rcb->handle); /* read file chunk */
 
+
     if( len < 0 ) {                                 /* check for errors */
         perror( "Error while writing to client" );
     } else if( len > 0 ) {                            /* if none, send chunk */
 
+        printf("Sent %d bytes of file %s\n", rcb->numBytesRemaining, rcb->path);
         len = write(rcb->clientFD, buffer, len);
         // subtract from bytes remaining
         rcb->numBytesRemaining -= len;
@@ -141,11 +166,12 @@ void processRequestSJF(RCB* rcb, Scheduler* sched) {
         }
     }                 /* the last chunk < 8192 */
 
+    //printf("%s\n", buffer);
+
+
     // close the file and connection
     //need to free things
-    printf( "Request %d completed\n", rcb->sequenceNum );
-    fflush(stdout);
-    
+    printf("Request for file %s completed.\n", rcb->path);
     fclose(rcb->handle);
     close(rcb->clientFD);
     free(rcb);
@@ -155,14 +181,23 @@ void processRequestSJF(RCB* rcb, Scheduler* sched) {
 void processRequestRR(RCB* rcb, Scheduler* sched) {
     // send part of it to the client
     static char *buffer;                                  /* request buffer */
+    //if( !buffer ) {                             /* 1st time, alloc buffer */
     buffer = malloc( MAX_HTTP_SIZE_8KB );
     if( !buffer ) {                     /* error check */
         perror( "Error while allocating memory" );
         abort();
     }
+    //}
     long len;                                              /* length of data read */
 
     len = fread( buffer, 1, MAX_HTTP_SIZE_8KB, rcb->handle); /* read file chunk */
+
+    int amount = rcb->quantum;
+    if (rcb->numBytesRemaining < rcb->quantum) {
+        amount = rcb->numBytesRemaining;
+    }
+    printf("Sent %d bytes of file %s\n", amount, rcb->path);
+
 
     if( len < 0 ) {                                 /* check for errors */
         perror( "Error while writing to client" );
@@ -176,17 +211,18 @@ void processRequestRR(RCB* rcb, Scheduler* sched) {
         }
     }                 /* the last chunk < 8192 */
 
+    //printf("%s\n", buffer);
 
     // if this was the end, close the file and connection,
     //otherwise add it to the end of the queue
     if (rcb->numBytesRemaining <= 0) {
         //need to free things
-        printf( "Request %d completed\n", rcb->sequenceNum );
-        fflush(stdout);
 
+        printf("Request for file %s completed.\n", rcb->path);
         fclose(rcb->handle);
         close(rcb->clientFD);
         free(rcb);
+
     } else {
         addRCBtoQueue(rcb, sched);
     }
@@ -205,6 +241,9 @@ void processRequestMLFB(RCB* rcb, Scheduler* nextLevelSchedule, size_t max_size,
 
     len = fread( buffer, 1, max_size, rcb->handle); /* read file chunk */
 
+    //DEBUGGING, REMOVE
+    printf("QUANTUM: %d LENGTH: %ld \n", rcb->quantum, len);
+
     if( len < 0 ) {                           /* check for errors */
         perror( "Error while writing to client" );
     } else if( len > 0 ) {                      /* if none, send chunk */
@@ -217,12 +256,11 @@ void processRequestMLFB(RCB* rcb, Scheduler* nextLevelSchedule, size_t max_size,
         }
     }           /* the last chunk < 8192 */
 
+    //printf("%s\n", buffer);
+
     // if this was the end, close the file and connection,
     //otherwise add it to the end of the queue
     if (rcb->numBytesRemaining <= 0) {
-        printf( "Request %d completed\n", rcb->sequenceNum );
-        fflush(stdout);
-
         //need to free things
         fclose(rcb->handle);
         close(rcb->clientFD);
@@ -242,93 +280,91 @@ void processRequestMLFB(RCB* rcb, Scheduler* nextLevelSchedule, size_t max_size,
  * Parameters:
  *              Each type of scheduler
  */
-void ProcessRequests() {
-
-    static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
-
-    /* client file descriptor */
-    int fd;
-
-    //The schedulers
-    //SJF scheduler
-    Scheduler schedSJF;
-    schedSJF.requestTable = NULL;
-    schedSJF.type = SJF;
-    //round robin
-    Scheduler schedRR;
-    schedRR.requestTable = NULL;
-    schedRR.type = RR;
-    //high priority
-    Scheduler schedHIGH;
-    schedHIGH.requestTable = NULL;
-    schedHIGH.type = MLFB;
-    //medium priority
-    Scheduler schedMED;
-    schedMED.requestTable = NULL;
-    schedMED.type = MLFB;
+static void * ProcessRequests(void * args) {
+    //static pthread_mutex_t workerqueue_lock = PTHREAD_MUTEX_INITIALIZER;
+    WorkerThreadData* myWorkerThreadData = (WorkerThreadData*)args;
 
     for(;; ) {                                  /* main loop */
-        network_wait();                   /* wait for clients */
 
-        for( fd = network_open(); fd >= 0; fd = network_open() ) { /* get clients */                           /* process each client */
-            // create scheduler here, RR for now
-            if (type_RR) {
-                serve_client( fd, &schedRR, MAX_HTTP_SIZE_8KB );
-            }
-            else if (type_SJF) {
-                serve_client( fd, &schedSJF, MAX_HTTP_SIZE_8KB );
-            }
-            else if (type_MLFB) {
-                //start mlfb in high schedule priority queue
-                serve_client( fd, &schedHIGH, MAX_HTTP_SIZE_8KB );
-            }
-        }
-        // the next request
-        //TODO: Can this run for multiple clients with the same queue?
+        //avoid faults
 
-        while (type_SJF && schedSJF.requestTable != NULL) {
-            if( pthread_mutex_lock( &lock ) ) abort();
-            RCB* next = getNextRCB(&schedSJF);
-            if (next != NULL) {
-                //process all requests in SJF
-                processRequestSJF(next, &schedSJF);
+        //if we see an rcb, wake up
+        // && myWorkerThreadData->workerQueue->rcb != NULL
+        if (myWorkerThreadData->workerQueue != NULL){
+
+            //if( pthread_mutex_lock( &workerqueue_lock ) ) abort();
+            //pop now
+            struct WorkerNode *wq = popFrontWorkerQueue(&myWorkerThreadData->workerQueue);
+
+            //pthread_mutex_unlock( &workerqueue_lock );
+
+            if (wq != NULL) {
+                if(myWorkerThreadData->sched->type ==1){
+                    //printf( "adding to sjf\n" );
+                    printf("Request for file %s admitted\n", wq->rcb->path);
+                    addRCBtoQueueForSJF(wq->rcb, myWorkerThreadData->sched);
+                    //need to free for other schedulers
+                    free(wq);
+                }
+                    //For RR and MLFB, quantum is the size parameter, call function to add RCB to end of queue
+                else{
+                    //workerThreadData.workerQueue->rcb->quantum = http_size;
+                    //call the scheduler function to put this in the queue
+                    addRCBtoQueue(wq->rcb, myWorkerThreadData->sched);
+                }
             }
-            pthread_mutex_unlock( &lock );
+
+
+            while (type_SJF && schedSJF.requestTable != NULL) {
+                RCB* next = getNextRCB(&schedSJF);
+                if (next != NULL) {
+                    //for debuging only
+                    //printf( "Processing Shortest Job First Queue.\n" );
+                    //printf("Request for file %s admitted\n", wq->rcb->path);
+                    //process all requests in SJF
+                    processRequestSJF(next, &schedSJF);
+                }
+            }
+
+            while (type_MLFB && schedHIGH.requestTable != NULL) {
+                RCB* next = getNextRCB(&schedHIGH);
+                if (next != NULL) {
+                    //for debug
+                    //printf( "Processing high priority queue\n" );
+                    printf("Request for file %s admitted\n", wq->rcb->path);
+                    //only the mlfb uses this scheduler
+                    //processRequestMLFB(next RCB, next scheduler to put file in, this que size, next que size)
+                    processRequestMLFB(next, &schedMED, MAX_HTTP_SIZE_8KB, MAX_HTTP_SIZE_64KB);
+                }
+            }
+
+            //check the medium priority queue, it should break if there is a new file in high priority
+            while (type_MLFB && schedMED.requestTable != NULL && schedHIGH.requestTable == NULL) {
+                RCB* next = getNextRCB(&schedMED);
+                if (next != NULL) {
+                    //for debug only
+                    printf( "Processing medium priority queue.\n" );
+                    processRequestMLFB(next, &schedRR, MAX_HTTP_SIZE_64KB, MAX_HTTP_SIZE_8KB);
+                }
+            }
+
+            while ((type_MLFB || type_RR) && schedRR.requestTable != NULL && schedMED.requestTable == NULL
+                   && schedHIGH.requestTable == NULL) {
+                RCB* next = getNextRCB(&schedRR);
+                if (next != NULL) {
+                    //for debug only
+                    printf( "Processing round robin queue.\n" );
+                    //process all requests in round robin
+                    processRequestRR(next, &schedRR);
+                }
+            }
+
         }
 
-        while (type_MLFB && schedHIGH.requestTable != NULL) {
-            if( pthread_mutex_lock( &lock ) ) abort();
-            RCB* next = getNextRCB(&schedHIGH);
-            if (next != NULL) {
-                //only the mlfb uses this scheduler
-                //processRequestMLFB(next RCB, next scheduler to put file in, this que size, next que size)
-                processRequestMLFB(next, &schedMED, MAX_HTTP_SIZE_8KB, MAX_HTTP_SIZE_64KB);
-            }
-            pthread_mutex_unlock( &lock );
-        }
-
-        //check the medium priority queue, it should break if there is a new file in high priority
-        while (type_MLFB && schedMED.requestTable != NULL && schedHIGH.requestTable == NULL) {
-            if( pthread_mutex_lock( &lock ) ) abort();
-            RCB* next = getNextRCB(&schedMED);
-            if (next != NULL) {
-                processRequestMLFB(next, &schedRR, MAX_HTTP_SIZE_64KB, MAX_HTTP_SIZE_8KB);
-            }
-            pthread_mutex_unlock( &lock );
-        }
-
-        while ((type_MLFB || type_RR) && schedRR.requestTable != NULL && schedMED.requestTable == NULL
-               && schedHIGH.requestTable == NULL) {
-            if( pthread_mutex_lock( &lock ) ) abort();
-            RCB* next = getNextRCB(&schedRR);
-            if (next != NULL) {
-                //process all requests in round robin
-                processRequestRR(next, &schedRR);
-            }
-            pthread_mutex_unlock( &lock );
-        }
     }
 }
+
+
 /* This function is where the program starts running.
  *    The function first parses its command line parameters to determine port #
  *    Then, it initializes, the network and enters the main loop.
@@ -340,24 +376,36 @@ void ProcessRequests() {
  * Returns: an integer status code, 0 for success, something else for error.
  */
 int main( int argc, char **argv ) {
+    //workerThreadData = malloc(sizeof(workerThreadData));
+    workerThreadData.workerQueue = workerQueue;
     int port = -1;                              /* server port # */
+    /* client file descriptor */
+    int fd;
+    pthread_t tid;
+    //init schedulers
+    schedSJF.requestTable = NULL;
+    schedSJF.type = SJF;
+    //round robin
+    schedRR.requestTable = NULL;
+    schedRR.type = RR;
+    //high priority
+    schedHIGH.requestTable = NULL;
+    schedHIGH.type = MLFB;
+    //medium priority
+    schedMED.requestTable = NULL;
+    schedMED.type = MLFB;
+
     //positive integer denoting the number of worker threads to create
     int num_threads = -1;
-    pthread_t tid;
+
 
     /* check for and process parameters
+     * Takes 3 args
      */
     if( ( argc  > 4 ) || ( argc < 4 ) || ( sscanf( argv[1], "%d", &port ) < 0 )
         || ( sscanf( argv[3], "%d", &num_threads ) < 1 ) ) {
         printf( "usage: sms <port> <scheduler> <threads>\n" );
         return 0;
-    }
-
-    network_init( port );                       /* init network module */
-
-    //Initialize threads
-    for (int i = 0; i < num_threads; i++) {
-        //pthread_create(&tid, NULL, &ProcessRequests, NULL);
     }
 
     //find the scheduler type
@@ -375,5 +423,49 @@ int main( int argc, char **argv ) {
         return 0;
     }
 
-    ProcessRequests();
+    if (type_RR) {
+        workerThreadData.sched = &schedRR;
+    } else if (type_SJF) {
+        workerThreadData.sched = &schedSJF;
+    } else if (type_MLFB) {
+        workerThreadData.sched = &schedHIGH;
+    }
+
+
+
+    network_init( port );                       /* init network module */
+
+    if (num_threads > 100) {
+        //can only have 100 threads maximum
+        printf( "Error: maximum 100 threads\n" );
+        return 0;
+    }
+    //Initialize threads
+    for (int i = 0; i < num_threads; i++) {
+        pthread_create(&tid, NULL, &ProcessRequests, &workerThreadData);
+    }
+
+
+
+    for(;; ) {                                  /* main loop */
+        network_wait();                   /* wait for clients */
+
+        //TODO: enqueue new thread here
+        for (fd = network_open();
+             fd >= 0; fd = network_open()) { /* get clients */                           /* process each client */
+            // create scheduler here, RR for now
+            if (type_RR) {
+
+                //workerThreadData.sched = &schedRR;
+                serve_client(fd, &schedRR, MAX_HTTP_SIZE_8KB);
+            } else if (type_SJF) {
+                //workerThreadData.sched = &schedSJF;
+                serve_client(fd, &schedSJF, MAX_HTTP_SIZE_8KB);
+            } else if (type_MLFB) {
+                //workerThreadData.sched = &schedHIGH;
+                //start mlfb in high schedule priority queue
+                serve_client(fd, &schedHIGH, MAX_HTTP_SIZE_8KB);
+            }
+        }
+    }
 }

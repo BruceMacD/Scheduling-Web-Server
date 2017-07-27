@@ -1,14 +1,14 @@
 # Targets & general dependencies
 PROGRAM = sws
-HEADERS = network.h request-table.h
-OBJS = network.o sws.o request-table.o
-ADD_OBJS = 
+HEADERS = network.h request-table.h worker-queue.h
+OBJS = network.o sws.o request-table.o worker-queue.o
+ADD_OBJS =
 
 # compilers, linkers, utilities, and flags
 CC = gcc
 CFLAGS = -Wall -g
 COMPILE = $(CC) $(CFLAGS)
-LINK = $(CC) $(CFLAGS) -o $@ 
+LINK = $(CC) $(CFLAGS) -o $@
 
 # implicit rule to build .o from .c files
 %.o: %.c $(HEADERS)
@@ -21,11 +21,11 @@ all: sws
 $(PROGRAM): $(OBJS) $(ADD_OBJS)
 	$(LINK) $(OBJS) $(ADD_OBJS) -l pthread
 
-lib: sws_gold.o 
+lib: sws_gold.o
 	 ar -r libxsws.a sws_gold.o
 
 clean:
-	rm -f *.o $(PROGRAM) 
+	rm -f *.o $(PROGRAM)
 
 zip:
 	rm -f sws.zip
