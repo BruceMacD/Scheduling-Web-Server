@@ -171,7 +171,7 @@ void processRequestSJF(RCB* rcb, Scheduler* sched) {
 
     // close the file and connection
     //need to free things
-    printf("Request for file %s completed.", rcb->path);
+    printf("Request for file %s completed.\n", rcb->path);
     fclose(rcb->handle);
     close(rcb->clientFD);
     free(rcb);
@@ -301,7 +301,7 @@ static void * ProcessRequests(void * args) {
             if (wq != NULL) {
                 if(myWorkerThreadData->sched->type ==1){
                     //printf( "adding to sjf\n" );
-                    printf("Request for file %s admitted", wq->rcb->path);
+                    printf("Request for file %s admitted\n", wq->rcb->path);
                     addRCBtoQueueForSJF(wq->rcb, myWorkerThreadData->sched);
                     //need to free for other schedulers
                     free(wq);
