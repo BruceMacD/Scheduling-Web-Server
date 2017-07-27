@@ -19,10 +19,8 @@ HOW TO OPERATE
 		Simply navigate to correct folder and run "make"
 		
 	Start web server:
-		./sws <PortNumber> <Algorithm> <Threads>
-		Where
-			<PortNumber> is replaced with any port number for your computer
-			
+		./sws 38080 <Algorithm> <Threads>
+		Where			
 			<Algorithm> is replaced with one of the following acronyms:
 				SJF					(Shortest Job First)
 				RR					(Round Robin)
