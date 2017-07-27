@@ -110,7 +110,9 @@ RCB* getNextRCB(Scheduler* sched){
     RCB * next = sched->requestTable->rcb;
     //struct RCBnode* node = sched->requestTable;
     //printf("%d", sched->requestTable->rcb->clientFD);
-    free(sched->requestTable);
+    if (sched != NULL && sched->requestTable != NULL){
+        free(sched->requestTable);
+    }
     sched->requestTable = sched->requestTable->next;
 
     return next;
