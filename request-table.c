@@ -16,10 +16,10 @@ void initRequestTable(Scheduler* sched) {
 
 // function for adding RCB to queue
 void addRCBtoQueue(RCB* rcb, Scheduler* sched){
-    
+
     //critical section, only one thread at a time can do this
     //static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
-    
+
     struct RCBnode* next = NULL;
     struct RCBnode* node = NULL;
 
@@ -46,15 +46,15 @@ void addRCBtoQueue(RCB* rcb, Scheduler* sched){
         next->rcb = rcb;
         node->next = next;
     }
-    
+
     pthread_mutex_unlock( &requesttable_lock );
 }
 
 void addRCBtoQueueForSJF(RCB* rcb, Scheduler* sched){
-    
+
     //critical section, only one thread at a time can do this
-    
-    
+
+
     struct RCBnode* next = NULL;
     struct RCBnode* node = NULL;
     int value;
@@ -98,7 +98,7 @@ void addRCBtoQueueForSJF(RCB* rcb, Scheduler* sched){
             node->next = next;
         }
     }
-    
+
     pthread_mutex_unlock( &requesttable_lock );
 }
 

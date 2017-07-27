@@ -1,0 +1,24 @@
+Thread 1 ============================================
+HTTP/1.1 200 OK
+
+Title: Test 1 - Two Small Immediate Files
+Group number: 4
+Purpose: Serve a request for two small files at zero seconds.
+How it works: Twos files of size 420 bytes are requested as soon as the client connects.
+Expected result: SJF: The files are both finished in one step each
+                 RR: The files are both finished in one step each
+                 MLFB: The files are both finished in the high priority queue
+
+Thread 2 ============================================
+HTTP/1.1 200 OK
+
+Title: Test 1 - Two Small Immediate Files
+Group number: 4
+Purpose: Serve a request for two small files at zero seconds.
+How it works: Twos files of size 420 bytes are requested as soon as the client connects.
+Expected result: SJF: The files are both finished in one step each
+                 RR: The files are both finished in one step each
+                 MLFB: The files are both finished in the high priority queue
+
+=====================================================================
+Request completion order:  1  2 
