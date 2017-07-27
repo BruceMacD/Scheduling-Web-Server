@@ -320,7 +320,7 @@ static void * ProcessRequests(void * args) {
                 if (next != NULL) {
                     //for debuging only
                     //printf( "Processing Shortest Job First Queue.\n" );
-                    printf("Request for file %s admitted\n", wq->rcb->path);
+                    //printf("Request for file %s admitted\n", wq->rcb->path);
                     //process all requests in SJF
                     processRequestSJF(next, &schedSJF);
                 }
