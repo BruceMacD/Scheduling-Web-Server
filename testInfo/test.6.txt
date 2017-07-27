@@ -1,15 +1,14 @@
-Title: Test 2 - Two Small Files With Request Delay
+Title: Test 6 - Three Different Files With Different Connection Times
 Group number: 4
-Purpose: Serve a request for two small files, one at zero seconds then another
-         after 2 seconds.
-How it works: One file requested as soon as the client connects, the next is
-              requested 2 seconds later.
-Expected result: SJF: The files are both finished in one step each, with request
-                      at zero seconds being completed before the second request
-                      arrives.
-                 RR: The files are both finished in one step each, with request
-                     at zero seconds being completed before the second request
-                     arrives.
-                 MLFB: The files are both finished in the high priority queue,
-                       with request at zero seconds being completed before the
-                       second request arrives.
+Purpose: Serve a request for a small, medium and large file with different connection times
+
+How it works: Connection for large file is made first followed by connections for the small and medium sized files 1 second later.
+            
+Expected result: SJF: The large file will be completely processed first, followed 
+		      by the small file and then the medium sized file.
+                 RR: The large file is placed in the round robin scheduler 10 times
+		      and processed before requests for the small and medium sized 	
+		      files which both require one round to be processed.
+                 MLFB: The large file finishes in the Round Robin queue,
+                       before the small and medium file requests are made. 
+		       The small and medium file requests finish in the high priority queue.
