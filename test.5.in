@@ -1,2 +1,5 @@
 38080
-0.0 0.0 ./testInfo/test.0.txt
+0.0 0.0 ./testInfo/test.5.1.txt
+0.5 0.5 ./testInfo/test.5.2.txt
+1.0 1.0 ./testInfo/test.5.3.txt
+1.5 1.5 ./testInfo/test.5.4.txt
