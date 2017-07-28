@@ -1,0 +1,4 @@
+Bruce MacDonald - MLFB, locks, tests
+Johna Latouf - queues, RR, threads
+Brandon Bremner - SJF, tests
+Ryan Stevens - tests, documentation

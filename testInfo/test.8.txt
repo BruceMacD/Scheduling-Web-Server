@@ -1,15 +1,10 @@
-Title: Test 2 - Two Small Files With Request Delay
+Title: Test 8 - Immediate Connection Delayed Requests fir Same File
 Group number: 4
-Purpose: Serve a request for two small files, one at zero seconds then another
-         after 2 seconds.
-How it works: One file requested as soon as the client connects, the next is
-              requested 2 seconds later.
-Expected result: SJF: The files are both finished in one step each, with request
-                      at zero seconds being completed before the second request
-                      arrives.
-                 RR: The files are both finished in one step each, with request
-                     at zero seconds being completed before the second request
-                     arrives.
-                 MLFB: The files are both finished in the high priority queue,
-                       with request at zero seconds being completed before the
-                       second request arrives.
+Purpose: Serve a multiple requests for the same file over a short period of time.
+How it works: The file is requested as soon as the client connects, then again
+              repeatedly over an interval of 0.1s.
+Expected result: SJF: The files are all of the same length, finish in order of
+                      request time.
+                 RR: The requests are completed before the next request arrives.
+                 MLFB: All files are finished in high priority queue before next
+                 request arrives.

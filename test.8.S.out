@@ -1,0 +1,114 @@
+Thread 1 ============================================
+HTTP/1.1 200 OK
+
+Title: Test 8 - Immediate Connection Delayed Requests fir Same File
+Group number: 4
+Purpose: Serve a multiple requests for the same file over a short period of time.
+How it works: The file is requested as soon as the client connects, then again
+              repeatedly over an interval of 0.1s.
+Expected result: SJF: The files are all of the same length, finish in order of
+                      request time.
+                 RR: The requests are completed before the next request arrives.
+                 MLFB: All files are finished in high priority queue before next
+                 request arrives.
+
+Thread 2 ============================================
+HTTP/1.1 200 OK
+
+Title: Test 8 - Immediate Connection Delayed Requests fir Same File
+Group number: 4
+Purpose: Serve a multiple requests for the same file over a short period of time.
+How it works: The file is requested as soon as the client connects, then again
+              repeatedly over an interval of 0.1s.
+Expected result: SJF: The files are all of the same length, finish in order of
+                      request time.
+                 RR: The requests are completed before the next request arrives.
+                 MLFB: All files are finished in high priority queue before next
+                 request arrives.
+
+Thread 3 ============================================
+HTTP/1.1 200 OK
+
+Title: Test 8 - Immediate Connection Delayed Requests fir Same File
+Group number: 4
+Purpose: Serve a multiple requests for the same file over a short period of time.
+How it works: The file is requested as soon as the client connects, then again
+              repeatedly over an interval of 0.1s.
+Expected result: SJF: The files are all of the same length, finish in order of
+                      request time.
+                 RR: The requests are completed before the next request arrives.
+                 MLFB: All files are finished in high priority queue before next
+                 request arrives.
+
+Thread 4 ============================================
+HTTP/1.1 200 OK
+
+Title: Test 8 - Immediate Connection Delayed Requests fir Same File
+Group number: 4
+Purpose: Serve a multiple requests for the same file over a short period of time.
+How it works: The file is requested as soon as the client connects, then again
+              repeatedly over an interval of 0.1s.
+Expected result: SJF: The files are all of the same length, finish in order of
+                      request time.
+                 RR: The requests are completed before the next request arrives.
+                 MLFB: All files are finished in high priority queue before next
+                 request arrives.
+
+Thread 5 ============================================
+HTTP/1.1 200 OK
+
+Title: Test 8 - Immediate Connection Delayed Requests fir Same File
+Group number: 4
+Purpose: Serve a multiple requests for the same file over a short period of time.
+How it works: The file is requested as soon as the client connects, then again
+              repeatedly over an interval of 0.1s.
+Expected result: SJF: The files are all of the same length, finish in order of
+                      request time.
+                 RR: The requests are completed before the next request arrives.
+                 MLFB: All files are finished in high priority queue before next
+                 request arrives.
+
+Thread 6 ============================================
+HTTP/1.1 200 OK
+
+Title: Test 8 - Immediate Connection Delayed Requests fir Same File
+Group number: 4
+Purpose: Serve a multiple requests for the same file over a short period of time.
+How it works: The file is requested as soon as the client connects, then again
+              repeatedly over an interval of 0.1s.
+Expected result: SJF: The files are all of the same length, finish in order of
+                      request time.
+                 RR: The requests are completed before the next request arrives.
+                 MLFB: All files are finished in high priority queue before next
+                 request arrives.
+
+Thread 7 ============================================
+HTTP/1.1 200 OK
+
+Title: Test 8 - Immediate Connection Delayed Requests fir Same File
+Group number: 4
+Purpose: Serve a multiple requests for the same file over a short period of time.
+How it works: The file is requested as soon as the client connects, then again
+              repeatedly over an interval of 0.1s.
+Expected result: SJF: The files are all of the same length, finish in order of
+                      request time.
+                 RR: The requests are completed before the next request arrives.
+                 MLFB: All files are finished in high priority queue before next
+                 request arrives.
+
+Thread 8 ============================================
+HTTP/1.1 200 OK
+
+Title: Test 8 - Immediate Connection Delayed Requests fir Same File
+Group number: 4
+Purpose: Serve a multiple requests for the same file over a short period of time.
+How it works: The file is requested as soon as the client connects, then again
+              repeatedly over an interval of 0.1s.
+Expected result: SJF: The files are all of the same length, finish in order of
+                      request time.
+                 RR: The requests are completed before the next request arrives.
+                 MLFB: All files are finished in high priority queue before next
+                 request arrives.
+
+=====================================================================
+Request completion order:  1  2  3  4  5  6  7  8 
