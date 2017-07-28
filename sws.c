@@ -228,7 +228,7 @@ void processRequestMLFB(RCB* rcb, Scheduler* nextLevelSchedule, size_t max_size,
     if( len < 0 ) {                           /* check for errors */
         perror( "Error while writing to client" );
     } else if( len > 0 ) {                      /* if none, send chunk */
-
+	printf("Sent %ld bytes of file %s\n", len, rcb->path);
         len = write(rcb->clientFD, buffer, len);
         // subtract from bytes remaining
         rcb->numBytesRemaining -= len;
@@ -240,6 +240,7 @@ void processRequestMLFB(RCB* rcb, Scheduler* nextLevelSchedule, size_t max_size,
     //if this was the end, close the file and connection,
     //otherwise add it to the end of the queue
     if (rcb->numBytesRemaining <= 0) {
+	printf("Request for file %s completed.\n", rcb->path);
         //need to free things
         fclose(rcb->handle);
         close(rcb->clientFD);
@@ -261,6 +262,7 @@ void processRequestMLFB(RCB* rcb, Scheduler* nextLevelSchedule, size_t max_size,
  */
 static void * ProcessRequests(void * args) {
     WorkerThreadData* myWorkerThreadData = (WorkerThreadData*)args;
+    int count;
 
     for(;; ) {                                  /* main loop */
 
@@ -308,11 +310,15 @@ static void * ProcessRequests(void * args) {
                     processRequestMLFB(next, &schedRR, MAX_HTTP_SIZE_64KB, MAX_HTTP_SIZE_8KB);
                 }
             }
-
+	    count = 0;
             while ((type_MLFB || type_RR) && schedRR.requestTable != NULL && schedMED.requestTable == NULL
                    && schedHIGH.requestTable == NULL) {
                 RCB* next = getNextRCB(&schedRR);
                 if (next != NULL) {
+		    if(myWorkerThreadData->sched->type ==2 && count == 0){
+		        printf("Request for file %s admitted\n", wq->rcb->path);
+			count++;
+		    }
                     //process all requests in round robin
                     processRequestRR(next, &schedRR);
                 }
