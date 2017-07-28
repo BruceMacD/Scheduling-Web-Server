@@ -1,0 +1,11 @@
+Title: Test 4 - Multiple Files Different Sizes
+Group number: 4
+Purpose: Serve a request for 3 files of different sizes
+How it works: One file requested as soon as the client connects all files
+              are requested 0 seconds after connection.
+              File 4.1 is smallest, 4.2 medium sized, 4.3 large sized.
+Expected result: SJF: The files are completed in order from smallest to largest.
+                 RR: The files are finished from smallest to largest sinxe the
+                 medium file takes 2 RR turns, largest takes many iterations.
+                 MLFB: Two files are finished in the high priority queue.
+                 Large file is completed in the RR level queue.
