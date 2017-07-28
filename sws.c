@@ -147,6 +147,7 @@ void processRequestSJF(RCB* rcb, Scheduler* sched) {
     if( len < 0 ) {                                 /* check for errors */
         perror( "Error while writing to client" );
     } else if( len > 0 ) {                            /* if none, send chunk */
+        printf("Sent %d bytes of file %s\n", rcb->numBytesRemaining, rcb->path);
         len = write(rcb->clientFD, buffer, len);
         // subtract from bytes remaining
         rcb->numBytesRemaining -= len;
@@ -175,7 +176,13 @@ void processRequestRR(RCB* rcb, Scheduler* sched) {
     long len;                                              /* length of data read */
 
     len = fread( buffer, 1, MAX_HTTP_SIZE_8KB, rcb->handle); /* read file chunk */
-    
+
+    int amount = rcb->quantum;
+    if (rcb->numBytesRemaining < rcb->quantum) {
+        amount = rcb->numBytesRemaining;
+    }
+    printf("Sent %d bytes of file %s\n", amount, rcb->path);
+
     if( len < 0 ) {                                 /* check for errors */
         perror( "Error while writing to client" );
     } else if( len > 0 ) {                            /* if none, send chunk */
@@ -219,6 +226,7 @@ void processRequestMLFB(RCB* rcb, Scheduler* nextLevelSchedule, size_t max_size,
     if( len < 0 ) {                           /* check for errors */
         perror( "Error while writing to client" );
     } else if( len > 0 ) {                      /* if none, send chunk */
+        printf("Sent %ld bytes of file %s\n", len, rcb->path);
         len = write(rcb->clientFD, buffer, len);
         // subtract from bytes remaining
         rcb->numBytesRemaining -= len;
